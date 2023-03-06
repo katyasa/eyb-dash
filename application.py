@@ -8,62 +8,107 @@ Created on Thu Feb  9 20:45:05 2023
 #https://medium.com/analytics-vidhya/python-dash-data-visualization-dashboard-template-6a5bff3c2b76
 
 import os
+import base64
+import pandas as pd
 import dash
 from dash import Dash, html, dcc, Input, Output
+from dash_bootstrap_templates import load_figure_template
 import dash_bootstrap_components as dbc
-import pandas as pd
 import plotly.express as px
 
-from dash_bootstrap_templates import load_figure_template
 
-# This loads the "cyborg" and "minty" themed figure template from dash-bootstrap-templates library,
-# adds it to plotly.io and makes "cyborg" (The first template in the list) the default figure template.
+# This loads the "cyborg" and "minty" themed figure template from
+# dash-bootstrap-templates library, adds it to plotly.io and
+# makes "cyborg" (The first template in the list) the default figure template.
 load_figure_template(["minty", "sandstone"])
 
-from datetime import datetime as dt
-import plotly.graph_objects as go
-import dash_daq as daq
-
 # load the dataset
-data_folder = 'assets/2023-02-05'
-file_path = os.path.join(data_folder, 'recipe_data.csv')
+DATA_FOLDER = 'assets/2023-02-05'
+IMAGE_PATH = 'assets/mybooks.jpg'
+file_path = os.path.join(DATA_FOLDER, 'recipe_data.csv')
+recipes_df = pd.read_csv(file_path)
 
-recipes = pd.read_csv(file_path)
-recipes = recipes[(recipes['date'] >= '2018-01-01') & (recipes['date'] < '2023-02-01')]
-recipes['month_year'] = pd.to_datetime(recipes['date']).dt.to_period('M')
+def process_input_data(data_df):
+    '''
+    Processes input data file: converts date field to time stamps, filters
+    only values after Jan 2018, adds a field for month and year and
+    splits title column into title and subtitle
+    Return -> dataframe
+    '''
+    data_df = data_df[(data_df['date'] >= '2018-01-01') & (data_df['date'] < '2023-02-01')]
+    data_df['month_year'] = pd.to_datetime(data_df['date']).dt.to_period('M')
 
-# new assets frame with split value columns
-title_col = recipes["title"].str.split(":", n=1, expand=True)
-# making separate first name column from new assets frame
-recipes["title"] = title_col[0]
-# making separate last name column from new assets frame
-recipes["subtitle"] = title_col[1]
+    # new assets frame with split value columns
+    title_col = data_df["title"].str.split(":", n=1, expand=True)
+    # making separate first name column from new assets frame
+    data_df["title"] = title_col[0]
+    # making separate last name column from new assets frame
+    data_df["subtitle"] = title_col[1]
+    return data_df
 
-# note there are multiple recipe_id's per line - this is for two reasons:
-# 1. non-unique recipes are possible outwith a single month
-# 2. where recipe has two authors, there are two entries for recipe_id, even within the same month
-recipes_by_date = recipes.groupby('date')['recipe_id'].nunique().reset_index()
-recipes_by_date.rename(columns={"recipe_id": "recipe_count"}, inplace=True)
-recipes_by_date_and_author = recipes.groupby(['date', 'author_name'])['recipe_id'].nunique().reset_index()
-recipes_by_date_and_author.rename(columns={"recipe_id": "recipe_count"}, inplace=True)
-#print(recipes_by_date_and_author[(recipes_by_date_and_author['date'] == "2020-06-01") ])
+def groupby_date(data):
+    '''Groups data by date.
+    Returns dataframe
+    '''
+    # note there are multiple recipe_id's per line - this is for two reasons:
+    # 1. non-unique recipes are possible outwith a single month
+    # 2. where recipe has two authors, there are two entries for recipe_id,
+    # even within the same month
+    data_by_date = data.groupby('date')['recipe_id'].nunique().reset_index()
+    data_by_date = data_by_date.rename(columns={"recipe_id": "recipe_count"})
+    return data_by_date
 
-recipes_by_cookbook = recipes.groupby('title')['recipe_id'].nunique().reset_index()
-recipes_by_cookbook.rename(columns={"recipe_id": "recipe_count"}, inplace=True)
-recipes_by_cookbook = recipes_by_cookbook.sort_values(by='recipe_count', ascending=False).head(20)
-
-recipes_by_author = recipes.groupby('author_name')['recipe_id'].nunique().reset_index()
-recipes_by_author.rename(columns={"recipe_id": "recipe_count"}, inplace=True)
-recipes_by_author = recipes_by_author.sort_values(by='recipe_count', ascending=False).head(20)
-
-# because a recipe could appear in multiple rows when with multiple authors,
-# to get the right value counts, I need only the name and when it was cooked.
-recipes_count = recipes[[ 'recipe_name', 'month_year' ]].drop_duplicates()
-recipes_count = recipes_count['recipe_name'].value_counts().reset_index()
-recipes_count = recipes_count.rename(columns={'recipe_name': 'count', 'index': 'recipe_name'}).head(10)
+def groupby_date_and_author(data):
+    '''Groups data by date and author.
+    Returns dataframe
+    '''
+    data_by_date_and_author = data.groupby(['date', 'author_name'])['recipe_id'].\
+        nunique().reset_index()
+    data_by_date_and_author = data_by_date_and_author.rename(columns={'recipe_id': 'recipe_count'})
+    return data_by_date_and_author
 
 
-author_name_dropdown = dcc.Dropdown(options=recipes_by_date_and_author['author_name'].unique(),
+def groupby_cookbook(data):
+    '''Groups data by cookbooks
+    Returns dataframe
+    '''
+    data_by_cookbook = data.groupby('title')['recipe_id'].nunique().reset_index()
+    data_by_cookbook = data_by_cookbook.rename(columns={"recipe_id": "recipe_count"})
+    data_by_cookbook = data_by_cookbook.sort_values(by='recipe_count', ascending=False).head(20)
+    return data_by_cookbook
+
+def group_by_author(data):
+    '''Groups data by author. Multiple authors per recipe are possible and these are treated as
+    separate entries.
+    Returns dataframe.
+    '''
+    data_by_author = data.groupby('author_name')['recipe_id'].nunique().reset_index()
+    data_by_author = data_by_author.rename(columns={"recipe_id": "recipe_count"})
+    data_by_author = data_by_author.sort_values(by='recipe_count', ascending=False).head(20)
+    return data_by_author
+
+def get_recipe_count(data):
+    '''Gets counts for each recipe.
+    Returns dataframe
+    '''
+    # because a recipe could appear in multiple rows when with multiple authors,
+    # to get the right value counts, I need only the name and when it was cooked.
+    data_count = data[['recipe_name', 'month_year']].drop_duplicates()
+    data_count = data_count['recipe_name'].value_counts().reset_index()
+    data_count = data_count. \
+        rename(columns={'recipe_name': 'count', 'index': 'recipe_name'}).head(10)
+    return data_count
+
+# create data structures
+recipes = process_input_data(recipes_df)
+recipe_by_date = groupby_date(recipes)
+recipe_by_date_and_author = groupby_date_and_author(recipes)
+recipe_by_cookbook = groupby_cookbook(recipes)
+recipe_by_author = group_by_author(recipes)
+recipe_counts = get_recipe_count(recipes)
+
+
+author_name_dropdown = dcc.Dropdown(options=recipe_by_date_and_author['author_name'].unique(),
                                     value='Jamie Oliver'
                                     )
 
@@ -103,7 +148,10 @@ DROPDOWN_STYLE = dict( width='50%', display='inline-block')
 
 
 def date_graph():
-    date_fig = px.line(recipes_by_date,
+    '''Creates graph of progress over time.
+    Returns plotly graph
+    '''
+    date_fig = px.line(recipe_by_date,
                        x="date",
                        y="recipe_count",
                        markers=True,
@@ -116,7 +164,7 @@ def date_graph():
                             )
     return date_fig
 
-author_date_fig = px.bar(recipes_by_date_and_author, x="date", y="recipe_count")
+author_date_fig = px.bar(recipe_by_date_and_author, x="date", y="recipe_count")
 
 sidebar = html.Div(
     [
@@ -157,8 +205,9 @@ background_text = dcc.Markdown('''
 card_background = dbc.Card(
     [
         dbc.CardHeader("Background", style=CARD_TEXT_STYLE),
-        dbc.CardBody( [background_text ] )
-    ]
+        dbc.CardBody([background_text]),
+    ]#, style={ 'width' : '75%', 'height' : '50%'},
+
 )
 card_kpi_total_cookbooks = dbc.Card(
     [
@@ -201,7 +250,7 @@ card_kpi_total_recipes_cooked = dbc.Card(
         dbc.CardBody(
             [
                 #html.H4("Total Recipes Cooked", className="card-title", style=CARD_TEXT_STYLE),
-                html.P(f"{recipes_by_date['recipe_count'].sum()}",
+                html.P(f"{recipe_by_date['recipe_count'].sum()}",
                        className="card-text",
                        style=CARD_TEXT_STYLE
                        )
@@ -216,8 +265,9 @@ card_kpi_avg_per_month = dbc.Card(
                      ),
       dbc.CardBody(
           [
-              # html.H4("Average Recipes per Month", className="card-title", style=CARD_TEXT_STYLE),
-              html.P(f"{round(recipes_by_date['recipe_count'].sum() / recipes_by_date.shape[0], 1)}",
+              # html.H4("Average Recipes per Month",
+              # className="card-title", style=CARD_TEXT_STYLE),
+              html.P(f"{round(recipe_by_date['recipe_count'].sum() / recipe_by_date.shape[0], 1)}",
                      className="card-text",
                      style=CARD_TEXT_STYLE
                      )
@@ -226,70 +276,44 @@ card_kpi_avg_per_month = dbc.Card(
       ]
 )
 
-cards_kpis = html.Div([
-        dbc.Row([
-            dbc.Col(card_kpi_total_cookbooks,
-                    #width=6,
-                   #md=3
-            ),
-            dbc.Col(card_kpi_timeframe,
-                    #width=6,
-                    #md=3
-                    ),
-            dbc.Col(card_kpi_total_recipes_cooked,
-                    #width=6,
-                    # md=3
-                    ),
-            dbc.Col(card_kpi_avg_per_month,
-                    #width=6,
-                    # md=3
-                    )
-        ]),
-  #      html.Br(),
-  #      dbc.Row([ ])
-])
-
-
 cards_kpis = html.Div(
-    [
-        dbc.CardHeader('KPIs', style=CARD_TEXT_STYLE),
-        html.Br(),
-        dbc.CardBody(cards_kpis)
-    ]
-)
-
-
-import base64
-image_path = 'assets/mybooks.jpg'
+    [dbc.CardHeader('KPIs', style=CARD_TEXT_STYLE),
+     html.Br(),
+     dbc.CardBody(html.Div([
+         dbc.Row([dbc.Col(card_kpi_total_cookbooks),
+                  dbc.Col(card_kpi_timeframe),
+                  dbc.Col(card_kpi_total_recipes_cooked),
+                  dbc.Col(card_kpi_avg_per_month)
+                  ]
+                 )
+     ]))])
 
 
 def b64_image(image_filename):
-    with open(image_filename, 'rb') as f:
-        image = f.read()
+    '''Convert a JPG image to a base 64 string
+    for HTML displaying
+    Returns base64 image
+    '''
+    with open(image_filename, 'rb') as input_file:
+        image = input_file.read()
     return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
 card_mybooks_picture = dbc.Card( [dbc.CardHeader("My Bookshelf", style=CARD_TEXT_STYLE),
-                                  dbc.CardImg(src=b64_image(image_path) )]
+                                  dbc.CardImg(src=b64_image(IMAGE_PATH))]
                                  ,
-                                 style={ 'height': '75%'},
+                                 style={ 'height': '65%', 'width' : '65%'},
                                 )
-content_home = html.Div([ dbc.Row([
-    dbc.Col(card_background,
-            width = 8,
-            #md=3
-         ),
-    dbc.Col([
-        card_mybooks_picture
-    ])]),
-    html.Br(),
-    dbc.Row([cards_kpis])
-    ])
-
-
-
+content_home = html.Div([dbc.Row([ dbc.Col(card_background), #width = 8, md=3
+                                   dbc.Col(card_mybooks_picture)
+                                ],
+                                 align="end"
+                                 ),
+                         html.Br(),
+                         dbc.Row([cards_kpis])
+                         ])
 
 content_over_time = dbc.Card([
-    dbc.Button('🡠', id='back-button', outline=True, size="sm",
+    dbc.Button('🡠git s', id='back-button', outline=True, size="sm",
                className='mt-2 ml-2 col-1', style={'display': 'none'}
                ),
     dbc.Row(
@@ -315,30 +339,30 @@ def get_top_graph(data, x_axis, y_axis, xaxis_title, yaxis_title):
     top_graph.update_yaxes(automargin=True)
     return top_graph
 
-top_cookbooks_graph = get_top_graph(recipes_by_date,
-                                    recipes_by_cookbook['recipe_count'].to_list(),
-                                    recipes_by_cookbook['title'].to_list(),
+top_cookbooks_graph = get_top_graph(recipe_by_date,
+                                    recipe_by_cookbook['recipe_count'].to_list(),
+                                    recipe_by_cookbook['title'].to_list(),
                                     xaxis_title="Count",
                                     yaxis_title='Cookbook Title'
                                     )
 
-top_authors_graph = get_top_graph(recipes_by_author,
-                                  recipes_by_author['recipe_count'].to_list(),
-                                  recipes_by_author['author_name'].to_list(),
+top_authors_graph = get_top_graph(recipe_by_author,
+                                  recipe_by_author['recipe_count'].to_list(),
+                                  recipe_by_author['author_name'].to_list(),
                                   xaxis_title="Count",
                                   yaxis_title='Author'
                                   )
 
-top_recipes_graph = get_top_graph(recipes_count,
-                                  recipes_count['count'].to_list(),
-                                  recipes_count['recipe_name'].to_list(),
+top_recipes_graph = get_top_graph(recipe_counts,
+                                  recipe_counts['count'].to_list(),
+                                  recipe_counts['recipe_name'].to_list(),
                                   xaxis_title="Count",
                                   yaxis_title='Recipe'
                                   )
-def get_top_content(figure, id):
+def get_top_content(figure, graph_id):
     top_content = dbc.Card(
         dbc.CardBody(
-            [dbc.Row(dcc.Graph(id=id, figure=figure), justify='center')]
+            [dbc.Row(dcc.Graph(id=graph_id, figure=figure), justify='center')]
             ), className="mt-3"
     )
     return top_content
@@ -406,35 +430,28 @@ application = app.server
 )
 
 def drilldown(click_data,n_clicks):
-
+    '''Defines to display when drilling down
+    Returns plotly figure
+    '''
     # using callback context to check which input was fired
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-
     if trigger_id == 'date-graph':
-
         # get month from clickData
         if click_data is not None:
             date = click_data['points'][0]['x']
-            if date in recipes_by_date_and_author['date'].unique():
-                # creating df for clicked vendor
-                month_df = recipes_by_date_and_author[recipes_by_date_and_author['date'] == date]
+            if date in recipe_by_date_and_author['date'].unique():
+                # creating df for clicked date
+                month_df = recipe_by_date_and_author[recipe_by_date_and_author['date'] == date]
                 fig = px.bar(month_df, x='author_name', y='recipe_count' )
                 date = date[:-3]
                 fig.update_layout(title='Drill-down to {} by Author'.format(date),
                                   showlegend=False,
-                                  #template='presentation',
                                   template="sandstone"
-
                                   )
                 return fig, {'display': 'block'}     #returning the fig and unhiding the back button
-
-            else:
-                return date_graph(), {'display': 'none'}     #hiding the back button
-
-    else:
-        return date_graph(), {'display': 'none'}
-
+            return date_graph(), {'display': 'none'}     #hiding the back button
+    return date_graph(), {'display': 'none'}
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 
@@ -442,8 +459,8 @@ def render_page_content(pathname):
     if pathname == "/":
         return html.Div(
             children=
-            [ html.H2('What I Cooked and What I ate', style=CARD_TEXT_STYLE),
-              html.H4('Food, Data, Viz', style=CARD_TEXT_STYLE),
+            [ html.H2('Data Vis in the Kitchen', style=CARD_TEXT_STYLE),
+              html.H4('Where Food & Data Meet', style=CARD_TEXT_STYLE),
               html.Br(),
               html.P(content_home),
               ]
@@ -456,14 +473,15 @@ def render_page_content(pathname):
               html.P(content_over_time)
             ]
         )
-    elif pathname == "/my-top":
-        return html.Div(
-            children=
-            [ html.H4("My Top Cookbooks/ Authors / Recipes", style=CARD_TEXT_STYLE),
-              html.Br(),
-              html.P(content_my_top)
-              ]
-        )
+    else:
+        if pathname == "/my-top":
+            return html.Div(
+                children=
+                [ html.H4("My Top Cookbooks/ Authors / Recipes", style=CARD_TEXT_STYLE),
+                html.Br(),
+                html.P(content_my_top)
+                ]
+            )
     # If the user tries to reach a different page, return a 404 message
     return html.Div(
         [
@@ -477,8 +495,8 @@ def render_page_content(pathname):
 
 app.config['suppress_callback_exceptions']=True
 
-if __name__=='__main__':
-    application.run(host='0.0.0.0', port='8080')
+# if __name__=='__main__':
+#     application.run(host='0.0.0.0', port='8080')
 #
-# if __name__ == '__main__':
-#     app.run_server(debug=True)
+if __name__ == '__main__':
+    app.run_server(debug=True)
