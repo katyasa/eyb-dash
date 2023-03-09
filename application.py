@@ -24,7 +24,8 @@ load_figure_template(["minty", "sandstone"])
 
 # load the dataset
 DATA_FOLDER = 'assets/2023-02-05'
-IMAGE_PATH = 'assets/mybooks.jpg'
+IMAGE_PATH_01 = 'assets/cookbooks01.JPG'
+IMAGE_PATH_02 = 'assets/cookbooks02.JPG'
 file_path = os.path.join(DATA_FOLDER, 'recipe_data.csv')
 recipes_df = pd.read_csv(file_path)
 
@@ -164,6 +165,25 @@ def date_graph():
                             )
     return date_fig
 
+def facetted_date_graph():
+    '''Creates facetted graph of progress over time by author.
+    Returns plotly graph
+    '''
+    authors = ['Yotam Ottolenghi', 'Nigella Lawson', 'Sabrina Ghayour',
+               'Noor Murad', 'Jamie Oliver', 'Helen Goh',
+               'Meera Sodha', 'Georgina Hayden', 'Ixta Belfrage'
+               ]
+    sub_recipe_data = recipe_by_date_and_author.loc[recipe_by_date_and_author['author_name'].isin(authors)]
+    fig = px.line(sub_recipe_data, x='date', y='recipe_count',
+                       color="author_name",
+                       facet_col="author_name",
+                       facet_col_wrap=5,
+                       facet_col_spacing=0.09,
+                       facet_row_spacing=0.4,
+                       #height=600, width=800,
+                       )
+    return fig
+
 author_date_fig = px.bar(recipe_by_date_and_author, x="date", y="recipe_count")
 
 sidebar = html.Div(
@@ -202,6 +222,7 @@ background_text = dcc.Markdown('''
                             directly from the website. Hurray! Having that database calls for some 
                             insights through cool visualisations. 
                         ''', style=TEXT_STYLE )
+
 card_background = dbc.Card(
     [
         dbc.CardHeader("Background", style=CARD_TEXT_STYLE),
@@ -209,72 +230,22 @@ card_background = dbc.Card(
     ]#, style={ 'width' : '75%', 'height' : '50%'},
 
 )
-card_kpi_total_cookbooks = dbc.Card(
-    [
-        dbc.CardHeader("Total Cookbooks",
-                       style=CARD_TEXT_STYLE
-                       ),
-        dbc.CardBody(
-            [
-                # html.H4("Total Cookbooks", className='card-title', style=CARD_TEXT_STYLE),
-                html.P(f"{recipes['title'].nunique()}",
-                       className="card-text",
-                       style=CARD_TEXT_STYLE
-                       )
-            ]
-        )
-    ]
-)
 
-card_kpi_timeframe = dbc.Card(
-    [ dbc.CardHeader("Time Period",
-                     style=CARD_TEXT_STYLE
-                     ),
-      dbc.CardBody(
-          [
-              #html.H4("Time Period", className="card-title", style=CARD_TEXT_STYLE),
-              html.P(f"{recipes['month_year'].min()} - {recipes['month_year'].max()}",
-                     className="card-text",
-                     style=CARD_TEXT_STYLE
-                     )
-                 ]
-             )
-      ]
-)
+def get_kpi_card(header, content):
+    card = dbc.Card([dbc.CardHeader(header, style=CARD_TEXT_STYLE),
+                     dbc.CardBody(
+                         [ # html.H4("Time Period", className="card-title", style=CARD_TEXT_STYLE),
+                           html.P(content, className="card-text", style=CARD_TEXT_STYLE)
+                          ]
+                         )
+                     ]
+                    )
+    return card
 
-card_kpi_total_recipes_cooked = dbc.Card(
-    [
-        dbc.CardHeader("Total Recipes Cooked",
-                       style=CARD_TEXT_STYLE
-                       ),
-        dbc.CardBody(
-            [
-                #html.H4("Total Recipes Cooked", className="card-title", style=CARD_TEXT_STYLE),
-                html.P(f"{recipe_by_date['recipe_count'].sum()}",
-                       className="card-text",
-                       style=CARD_TEXT_STYLE
-                       )
-            ]
-        )
-    ]
-)
-
-card_kpi_avg_per_month = dbc.Card(
-    [ dbc.CardHeader("Average per Month",
-                     style=CARD_TEXT_STYLE
-                     ),
-      dbc.CardBody(
-          [
-              # html.H4("Average Recipes per Month",
-              # className="card-title", style=CARD_TEXT_STYLE),
-              html.P(f"{round(recipe_by_date['recipe_count'].sum() / recipe_by_date.shape[0], 1)}",
-                     className="card-text",
-                     style=CARD_TEXT_STYLE
-                     )
-              ]
-      )
-      ]
-)
+card_kpi_total_cookbooks = get_kpi_card("Total (Indexed) Cookbooks", f"{recipes['title'].nunique()}")
+card_kpi_timeframe = get_kpi_card('Time Period', f"{recipes['month_year'].min()} - {recipes['month_year'].max()}")
+card_kpi_total_recipes_cooked = get_kpi_card('Total Recipes Cooked', f"{recipe_by_date['recipe_count'].sum()}")
+card_kpi_avg_per_month = get_kpi_card("Average per Month", f"{round(recipe_by_date['recipe_count'].sum() / recipe_by_date.shape[0], 1)}")
 
 cards_kpis = html.Div(
     [dbc.CardHeader('KPIs', style=CARD_TEXT_STYLE),
@@ -298,27 +269,33 @@ def b64_image(image_filename):
         image = input_file.read()
     return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
-card_mybooks_picture = dbc.Card( [dbc.CardHeader("My Bookshelf", style=CARD_TEXT_STYLE),
-                                  dbc.CardImg(src=b64_image(IMAGE_PATH))]
-                                 ,
-                                 style={ 'height': '65%', 'width' : '65%'},
-                                )
-content_home = html.Div([dbc.Row([ dbc.Col(card_background), #width = 8, md=3
-                                   dbc.Col(card_mybooks_picture)
-                                ],
-                                 align="end"
+def get_image_card(image_path, header):
+    card = dbc.Card( [dbc.CardHeader(header, style=CARD_TEXT_STYLE),
+                      dbc.CardImg(src=b64_image(image_path))
+                      ],
+                     #style={'height': '80%', 'width' : '65%'}
+                     )
+    return card
+
+card_mybooks_picture_01 = get_image_card(IMAGE_PATH_01, 'My Bookshelf')
+card_mybooks_picture_02 = get_image_card(IMAGE_PATH_02, 'My Bookshelf')
+
+content_home = html.Div([dbc.Row([dbc.Col(card_mybooks_picture_02),
+                                  dbc.Col(card_background, width=5), #width = 8, md=3
+                                  dbc.Col(card_mybooks_picture_01)
+                                   ],
+                                 align="center"
                                  ),
                          html.Br(),
                          dbc.Row([cards_kpis])
                          ])
 
 content_over_time = dbc.Card([
-    dbc.Button('🡠git s', id='back-button', outline=True, size="sm",
+    dbc.Button('<-', id='back-button', outline=True, size="sm",
                className='mt-2 ml-2 col-1', style={'display': 'none'}
                ),
     dbc.Row(
-        dcc.Graph(id='date-graph', figure=date_graph() ),
-        justify='center'
+        dcc.Graph(id='date-graph', figure=date_graph() ), justify='center'
     )
     ], className='mt-3'
 )
@@ -470,7 +447,10 @@ def render_page_content(pathname):
             children=
             [ html.H4("Progress Over Time By Month", style=CARD_TEXT_STYLE),
               html.Br(),
-              html.P(content_over_time)
+              html.P(content_over_time),
+              html.Br(),
+              html.H4("Progress Over Time by Month by Author", style=CARD_TEXT_STYLE),
+              html.P(dbc.Row(dcc.Graph(figure=facetted_date_graph()), justify='center'))
             ]
         )
     else:
