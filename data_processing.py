@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# coding: utf-8
+#coding: utf-8
 
-# # Eat Your Books Project
-# 
-# ## Data Processing
+# Eat Your Books Project
+
+# Data Processing
 
 import pandas as pd
 
@@ -24,14 +24,14 @@ print("----------------------------------------------------------------------")
 # ### Convert Date Column to Date Types
 
 no_dates = ["I've cooked this"
-            , 'Favorite Recipes' 
+            , 'Favorite Recipes'
             , 'Ottolenghi Guardian Book'
             ]
 
 recipe_dates = recipe_bookmark.loc[~recipe_bookmark["bookmark_name"].isin(no_dates)]
 recipe_dates['bookmark_name'].replace({'pre-2017': '2016-01'},inplace=True)
 recipe_dates['bookmark_name'] = pd.to_datetime(recipe_dates["bookmark_name"])
-recipe_dates.rename(columns={"bookmark_name": "date"},inplace=True)
+recipe_dates.rename(columns={"bookmark_name": "date"}, inplace=True)
 print("----------------------------------------------------------------------")
 print("Recipe Dates")
 print(recipe_dates.head())
@@ -113,7 +113,7 @@ recipe_dates_cooked_author_name_book = recipe_dates_cooked_author_name_book.merg
                                                                                   left_on='book_id',
                                                                                   right_on='id',
                                                                                   how='left')
-recipe_dates_cooked_author_name_book.drop(columns=['id'],inplace=True)
+recipe_dates_cooked_author_name_book.drop(columns=['id'], inplace=True)
 
 print("----------------------------------------------------------------------")
 ##merge above with recipe ingredient
@@ -121,42 +121,94 @@ recipe_ingredient = pd.read_csv(data_folder_path + '/recipe_ingredient.csv')
 print('Recipe Ingredient\n', recipe_ingredient.head(), recipe_ingredient.columns)
 
 print("----------------------------------------------------------------------")
+# Examine recipe category. Here I only want location category to plot on a map
+recipe_category = pd.read_csv(data_folder_path + '/recipe_category.csv')
+loc_categories = ['Spanish', 'Jewish', 'Russian', 'Vietnamese',
+                  'Argentinian', 'Australian', 'Afghan', 'Mexican', 'Chilean', 'Swedish', 'Mauritian',
+                  'Brazilian', 'Mediterranean', 'Egyptian', 'South American',
+                  'Greek', 'Asian', 'Georgian', 'British', 'New Zealand', 'Italian', 'Israeli', 'Iraqi',
+                  'Cypriot', 'Maltese', 'Thai', 'American', 'Chinese', 'Indian', 'Burmese', 'Middle Eastern',
+                  'Persian', 'Ethiopian', 'Moroccan', 'North African', 'Portuguese',
+                  'Turkish', 'Malaysian', 'Sri Lankan', 'Indonesian', 'English', 'Korean',
+                  'Corsican', 'Japanese', 'Scandinavian', 'Irish', 'Nepali', 'Swiss', 'Dutch', 'French',
+                  'Iranian', 'Scottish', 'Singaporean', 'Cuban', 'Palestinian', 'Chili',
+                  'Yemeni', 'Cajun & Creole', 'Jamaican', 'Eritrean', 'Syrian', 'Lebanese', 'Pakistani',
+                  'Tunisian', 'Azerbaijani', 'East European'
+                  ]
+
+recipe_location = recipe_category[recipe_category['category_name'].isin(loc_categories)]
+
+#replace location categories to actual country names
+loc_dict = {'Spanish': 'Spain', 'Jewish': 'Israel', 'Russian': 'Russia',
+            'Vietnamese': 'Vietnam', 'Argentinian': 'Argentina',
+            'Australian': 'Australia', 'Afghan': 'Afghanistan', 'Mexican': 'Mexico',
+            'Chilean': 'Chile', 'Swedish': 'Sweden', 'Mauritian': 'Mauritius',
+            'Brazilian': 'Brazil', 'Mediterranean': 'Mediterranean',
+            'Egyptian': 'Egypt', 'South American': 'South America',
+            'Greek': 'Greece', 'Asian': 'Asia', 'Georgian': 'Georgia', 'British': 'United Kingdom',
+            'New Zealand': 'New Zealand', 'Italian': 'Italy', 'Israeli': 'Israel', 'Iraqi': 'Iraq',
+            'Cypriot': 'Cyprus', 'Maltese': 'Malta', 'Thai': 'Thailand', 'American': 'United States of America',
+            'Chinese': 'China', 'Indian': 'India', 'Burmese': 'Burma', 'Middle Eastern': 'Israel',
+            'Persian': 'Iran', 'Ethiopian': 'Ethiopia', 'Moroccan': 'Morocco', 'North African': 'Morocco',
+            'Portuguese': 'Portugal', 'Turkish': 'Turkey', 'Malaysian': 'Malaysia', 'Sri Lankan': 'Sri Lanka',
+            'Indonesian': 'Indonesia', 'English': 'United Kingdom',
+            'Korean': 'South Korea', 'Corsican': 'Corsica', 'Japanese': 'Japan',
+            'Scandinavian': 'Sweden', 'Irish': 'Ireland', 'Nepali': 'Nepal',
+            'Swiss': 'Switzerland', 'Dutch': 'Netherlands', 'French': 'France',
+            'Iranian': 'France', 'Scottish': "Scotland", 'Singaporean': 'Singapore',
+            'Cuban': 'Cuba', 'Palestinian': 'Palestine', 'Chili': 'Chile',
+            'Yemeni': 'Yemen', 'Cajun & Creole': 'New Orleans', 'Jamaican': 'Jamaica',
+            'Eritrean': 'Eritrea', 'Syrian': 'Syria', 'Lebanese': 'Lebanon',
+            'Pakistani': 'Pakistan', 'Tunisian': 'Tunisia', 'Azerbaijani': 'Azerbaijan',
+            'East European': 'Ukraine'
+            }
+
+recipe_location = recipe_location.replace({"category_name": loc_dict})
+recipe_location = recipe_location.rename(columns={'category_name': 'location'})
+print("Recipe Location", recipe_location.head())
+
+#merge with recipe_dates_cooked
+
+# keeping only recipe_id, recipe_name and location columns
+recipe_location = recipe_dates_cooked_author_name_book[['recipe_id', 'recipe_name']].\
+    merge(recipe_location, on='recipe_id', how='left').drop_duplicates()
+
+print("----------------------------------------------------------------------")
 print("----------------------------------------------------------------------")
 print(recipe_dates_cooked_author.head(), recipe_dates_cooked_author.shape)
 print(recipe_dates_cooked_author_name.head(), recipe_dates_cooked_author_name.shape)
 print(recipe_dates_cooked_author_name_book.head(), recipe_dates_cooked_author_name_book.shape)
+print(recipe_location.head(), recipe_location.shape)
+
 recipe_dates_cooked_author_name_book.to_csv(data_folder_path + '/recipe_data.csv',index=False)
-print("----------------------------------------------------------------------")
-
-recipes_cooked = recipe_dates_cooked_author_name_book.recipe_id.values.tolist()
-print("----------------------------------------------------------------------")
-print("Number of recipes cooked", len(recipes_cooked))
-print("----------------------------------------------------------------------")
-
-recipes_total = recipe['id'].values.tolist()
-print("----------------------------------------------------------------------")
-print("Number of total ", len(recipes_total))
-print("----------------------------------------------------------------------")
-
-
-
-unfound_count = 0
-unfounds = list()
-
-for recipe in recipes_cooked:
-    if recipe not in recipes_total:
-        unfound_count += 1
-        unfounds.append(recipe)
-print("----------------------------------------------------------------------")
-print("Recipes in cooked not in total", unfound_count)
-print(unfounds)
-print("----------------------------------------------------------------------")
-
-print(recipe_dates_cooked[(recipe_dates_cooked['date'] == '2023-01-01')].shape)
-print(recipe_dates_cooked_author[(recipe_dates_cooked_author['date'] == '2023-01-01')].shape)
-print(recipe_dates_cooked_author[(recipe_dates_cooked_author['date'] == '2023-01-01')].shape)
-print(recipe_dates_cooked_author_name[(recipe_dates_cooked_author_name['date'] == '2023-01-01')].shape)
-print(recipe_dates_cooked_author_name_book[(recipe_dates_cooked_author_name_book['date'] == '2023-01-01')].shape)
-
-
+recipe_location.to_csv(data_folder_path + '/recipe_data_location.csv', index=False)
+# print("----------------------------------------------------------------------")
+#
+# recipes_cooked = recipe_dates_cooked_author_name_book.recipe_id.values.tolist()
+# print("----------------------------------------------------------------------")
+# print("Number of recipes cooked", len(recipes_cooked))
+# print("----------------------------------------------------------------------")
+#
+# recipes_total = recipe['id'].values.tolist()
+# print("----------------------------------------------------------------------")
+# print("Number of total ", len(recipes_total))
+# print("----------------------------------------------------------------------")
+#
+# unfound_count = 0
+# unfounds = list()
+#
+# for recipe in recipes_cooked:
+#     if recipe not in recipes_total:
+#         unfound_count += 1
+#         unfounds.append(recipe)
+# print("----------------------------------------------------------------------")
+# print("Recipes in cooked not in total", unfound_count)
+# print(unfounds)
+# print("----------------------------------------------------------------------")
+#
+# print(recipe_dates_cooked[(recipe_dates_cooked['date'] == '2023-01-01')].shape)
+# print(recipe_dates_cooked_author[(recipe_dates_cooked_author['date'] == '2023-01-01')].shape)
+# print(recipe_dates_cooked_author[(recipe_dates_cooked_author['date'] == '2023-01-01')].shape)
+# print(recipe_dates_cooked_author_name[(recipe_dates_cooked_author_name['date'] == '2023-01-01')].shape)
+# print(recipe_dates_cooked_author_name_book[(recipe_dates_cooked_author_name_book['date'] == '2023-01-01')].shape)
 

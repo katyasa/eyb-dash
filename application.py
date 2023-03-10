@@ -28,7 +28,10 @@ IMAGE_PATH_01 = 'assets/cookbooks01.JPG'
 IMAGE_PATH_02 = 'assets/cookbooks02.JPG'
 file_path = os.path.join(DATA_FOLDER, 'recipe_data.csv')
 recipes_df = pd.read_csv(file_path)
-
+recipe_location_df = pd.read_csv(os.path.join(DATA_FOLDER, 'recipe_data_location.csv')).dropna()
+location_counts_df = recipe_location_df['location'].value_counts().reset_index()
+location_counts_df = location_counts_df.rename(columns={'location': 'count', 'index': 'country'})
+print('Sum of recipes with locations', recipe_location_df.shape)
 def process_input_data(data_df):
     '''
     Processes input data file: converts date field to time stamps, filters
@@ -171,15 +174,15 @@ def facetted_date_graph():
     '''
     authors = ['Yotam Ottolenghi', 'Nigella Lawson', 'Sabrina Ghayour',
                'Noor Murad', 'Jamie Oliver', 'Helen Goh',
-               'Meera Sodha', 'Georgina Hayden', 'Ixta Belfrage'
+                'Georgina Hayden', 'Ixta Belfrage'
                ]
     sub_recipe_data = recipe_by_date_and_author.loc[recipe_by_date_and_author['author_name'].isin(authors)]
     fig = px.line(sub_recipe_data, x='date', y='recipe_count',
                        color="author_name",
                        facet_col="author_name",
-                       facet_col_wrap=5,
+                       facet_col_wrap=4,
                        facet_col_spacing=0.09,
-                       facet_row_spacing=0.4,
+                       facet_row_spacing=0.3,
                        #height=600, width=800,
                        )
     return fig
@@ -195,6 +198,7 @@ sidebar = html.Div(
                 dbc.NavLink("Home", href="/", active="exact"),
                 dbc.NavLink("Progress Over Time", href="/over-time", active="exact"),
                 dbc.NavLink("My Top", href="/my-top", active="exact"),
+                dbc.NavLink("Around The World", href="/around-the-world", active='exact')
             ],
             vertical=True,
             pills=True,
@@ -228,7 +232,6 @@ card_background = dbc.Card(
         dbc.CardHeader("Background", style=CARD_TEXT_STYLE),
         dbc.CardBody([background_text]),
     ]#, style={ 'width' : '75%', 'height' : '50%'},
-
 )
 
 def get_kpi_card(header, content):
@@ -290,16 +293,21 @@ content_home = html.Div([dbc.Row([dbc.Col(card_mybooks_picture_02),
                          dbc.Row([cards_kpis])
                          ])
 
-content_over_time = dbc.Card([
-    dbc.Button('<-', id='back-button', outline=True, size="sm",
-               className='mt-2 ml-2 col-1', style={'display': 'none'}
-               ),
-    dbc.Row(
-        dcc.Graph(id='date-graph', figure=date_graph() ), justify='center'
-    )
-    ], className='mt-3'
-)
 
+content_over_time = dbc.Card([dbc.CardHeader('Growth Rate by Month', style=CARD_TEXT_STYLE),
+                             dbc.CardBody([dbc.Button('Go Back', id='back-button', size="sm", color="dark",
+                                                      className='col-1'# ml-2 col-1',
+                                                      #style={'display': 'none'}
+                                                    ),
+                                           dbc.Row(dcc.Graph(id='date-graph', figure=date_graph()), justify='center')
+                                           ]
+                                          )
+                              ]
+                             )
+
+content_over_time_by_author = dbc.Card([dbc.CardHeader('Growth Rate by Month Split By Author', style=CARD_TEXT_STYLE),
+                                        dbc.CardBody(dbc.Row(dcc.Graph(figure=facetted_date_graph()), justify='center'))
+                                        ])
 
 # top_dropdown = dcc.Dropdown(id='top-dropdown',
 #                             options=[{'label': 'Top 20 Cookbooks', 'value': 'title'},
@@ -355,6 +363,28 @@ content_my_top = dbc.Tabs(
         dbc.Tab(top_recipes_content, label='Top Recipes')
     ]
 )
+
+
+def get_choropleth(recipe_location_data):
+
+    choropleth = px.choropleth(recipe_location_data,
+                               locationmode="country names",
+                               locations='country',
+                               color='count',
+                               color_continuous_scale="Greens",
+                               range_color=[1, 110]
+                               )
+    choropleth.update_layout(#autosize=False,
+                             margin=dict(l=0, r=0,b=0, t=0,pad=0, autoexpand=True),
+                             #width=800,
+                             # height=400,
+                             )
+    return choropleth
+
+content_around_the_world = dbc.Card([#dbc.CardHeader('Around the World', style=CARD_TEXT_STYLE),
+                                     dbc.CardBody(dbc.Row(dcc.Graph(figure=get_choropleth(location_counts_df)), justify='center'))
+                                     ]
+                                    )
 
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
@@ -424,7 +454,7 @@ def drilldown(click_data,n_clicks):
                 date = date[:-3]
                 fig.update_layout(title='Drill-down to {} by Author'.format(date),
                                   showlegend=False,
-                                  template="sandstone"
+                                  template="sandstone",
                                   )
                 return fig, {'display': 'block'}     #returning the fig and unhiding the back button
             return date_graph(), {'display': 'none'}     #hiding the back button
@@ -436,7 +466,7 @@ def render_page_content(pathname):
     if pathname == "/":
         return html.Div(
             children=
-            [ html.H2('Data Vis in the Kitchen', style=CARD_TEXT_STYLE),
+            [ html.H2('Data Visualisation in the Kitchen', style=CARD_TEXT_STYLE),
               html.H4('Where Food & Data Meet', style=CARD_TEXT_STYLE),
               html.Br(),
               html.P(content_home),
@@ -445,25 +475,32 @@ def render_page_content(pathname):
     elif pathname == "/over-time":
         return html.Div(
             children=
-            [ html.H4("Progress Over Time By Month", style=CARD_TEXT_STYLE),
+            [ html.H4("Progress Over Time", style=CARD_TEXT_STYLE),
               html.Br(),
               html.P(content_over_time),
               html.Br(),
-              html.H4("Progress Over Time by Month by Author", style=CARD_TEXT_STYLE),
-              html.P(dbc.Row(dcc.Graph(figure=facetted_date_graph()), justify='center'))
+              html.P(content_over_time_by_author)
             ]
         )
-    else:
-        if pathname == "/my-top":
+    elif pathname == "/my-top":
             return html.Div(
                 children=
-                [ html.H4("My Top Cookbooks/ Authors / Recipes", style=CARD_TEXT_STYLE),
+                [html.H4("My Top Cookbooks/ Authors / Recipes", style=CARD_TEXT_STYLE),
                 html.Br(),
                 html.P(content_my_top)
                 ]
             )
+    elif pathname == '/around-the-world':
+        recipe_count = recipe_location_df.shape[0]
+        return html.Div(
+                children=[html.H4(f'Around The World in {recipe_count} Recipes', style=CARD_TEXT_STYLE),
+                          html.Br(),
+                          html.P(content_around_the_world)
+                          ]
+            )
     # If the user tries to reach a different page, return a 404 message
-    return html.Div(
+    else:
+        return html.Div(
         [
             html.H1("404: Not found", className="text-danger"),
             html.Hr(),
