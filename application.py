@@ -137,8 +137,8 @@ CONTENT_STYLE = {
 
 TEXT_STYLE = {
     'textAlign': 'justify',
-    'font-size': '12px'
-   # 'color': '#191970',
+    'font-size': '14px',
+  #  'color': '#191970',
 
 }
 
@@ -225,14 +225,31 @@ background_text = dcc.Markdown('''
                             enter (my cookbooks and bookmarks) is available for download as .csv files 
                             directly from the website. Hurray! Having that database calls for some 
                             insights through cool visualisations. 
-                        ''', style=TEXT_STYLE )
+                        ''', style=TEXT_STYLE)
 
-card_background = dbc.Card(
-    [
-        dbc.CardHeader("Background", style=CARD_TEXT_STYLE),
-        dbc.CardBody([background_text]),
-    ]#, style={ 'width' : '75%', 'height' : '50%'},
-)
+around_the_world_text = dcc.Markdown('''
+                            EYB tags some recipes with a category, which, among other things, could be a 
+                            location. The location is varied - could be a specific country (like 'Italy', 'India'), 
+                            or not (like 'Jewish', 'Asia', 'Mediterranean'). I mapped these values to countries 
+                            to be able to plot them on a choropleth map.\n
+                             
+                            Just as I was curious about the locations 
+                            of my cuisine, these should be taken with a pinch of salt - recipes are eclectic, 
+                            multi-cultural and multi-flavoured creations reminiscent of our own roots, inspirations, and
+                            maybe trends.\n 
+                            
+                            What would be the location tag for _za'atar cacio e pepe_?  
+                            ''', style=TEXT_STYLE)
+
+def get_text_card(text, header_text):
+    card_text = dbc.Card(
+        [ dbc.CardHeader(header_text, style=CARD_TEXT_STYLE),
+          dbc.CardBody([text]),
+          ]#, style={ 'width' : '75%', 'height' : '50%'},
+    )
+    return card_text
+
+card_background = get_text_card(background_text, 'Background')
 
 def get_kpi_card(header, content):
     card = dbc.Card([dbc.CardHeader(header, style=CARD_TEXT_STYLE),
@@ -381,10 +398,20 @@ def get_choropleth(recipe_location_data):
                              )
     return choropleth
 
-content_around_the_world = dbc.Card([#dbc.CardHeader('Around the World', style=CARD_TEXT_STYLE),
+card_around_the_world_map = dbc.Card([dbc.CardHeader('Map (Hover Over Country)', style=CARD_TEXT_STYLE),
                                      dbc.CardBody(dbc.Row(dcc.Graph(figure=get_choropleth(location_counts_df)), justify='center'))
                                      ]
                                     )
+
+
+card_around_the_world_background = get_text_card(around_the_world_text, 'About the Data')
+
+content_around_the_world = html.Div([dbc.Row([dbc.Col(card_around_the_world_map),
+                                              dbc.Col(card_around_the_world_background, md=3), #width = 8, md=3
+                                              ],
+                                             align="center"
+                                             ),
+                                     ])
 
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
