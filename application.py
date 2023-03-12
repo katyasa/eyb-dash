@@ -6,6 +6,7 @@ Created on Thu Feb  9 20:45:05 2023
 """
 
 #https://medium.com/analytics-vidhya/python-dash-data-visualization-dashboard-template-6a5bff3c2b76
+#https://awstip.com/docker-ize-a-python-dash-application-and-deploy-it-to-cloud-717a7c25de5b
 
 import os
 import base64
@@ -23,15 +24,18 @@ import plotly.express as px
 load_figure_template(["minty", "sandstone"])
 
 # load the dataset
-DATA_FOLDER = 'assets/2023-02-05'
+DATA_FOLDER = 'assets/2023-03-11'
 IMAGE_PATH_01 = 'assets/cookbooks01.JPG'
 IMAGE_PATH_02 = 'assets/cookbooks02.JPG'
+START_DATE = '2018-01-01'
+END_DATE = '2023-03-01'
+
 file_path = os.path.join(DATA_FOLDER, 'recipe_data.csv')
 recipes_df = pd.read_csv(file_path)
 recipe_location_df = pd.read_csv(os.path.join(DATA_FOLDER, 'recipe_data_location.csv')).dropna()
 location_counts_df = recipe_location_df['location'].value_counts().reset_index()
 location_counts_df = location_counts_df.rename(columns={'location': 'count', 'index': 'country'})
-print('Sum of recipes with locations', recipe_location_df.shape)
+
 def process_input_data(data_df):
     '''
     Processes input data file: converts date field to time stamps, filters
@@ -39,7 +43,7 @@ def process_input_data(data_df):
     splits title column into title and subtitle
     Return -> dataframe
     '''
-    data_df = data_df[(data_df['date'] >= '2018-01-01') & (data_df['date'] < '2023-02-01')]
+    data_df = data_df[(data_df['date'] >= START_DATE) & (data_df['date'] < END_DATE)]
     data_df['month_year'] = pd.to_datetime(data_df['date']).dt.to_period('M')
 
     # new assets frame with split value columns
@@ -111,45 +115,23 @@ recipe_by_cookbook = groupby_cookbook(recipes)
 recipe_by_author = group_by_author(recipes)
 recipe_counts = get_recipe_count(recipes)
 
+# author_name_dropdown = dcc.Dropdown(options=recipe_by_date_and_author['author_name'].unique(),
+#                                     value='Jamie Oliver'
+#                                     )
 
-author_name_dropdown = dcc.Dropdown(options=recipe_by_date_and_author['author_name'].unique(),
-                                    value='Jamie Oliver'
-                                    )
-
-# the style arguments for the sidebar.
-SIDEBAR_STYLE = {
-    'position': 'fixed',
-    'top': 0,
-    'left': 0,
-    'bottom': 0,
-    'width': '15%',
-    'padding': '20px 10px',
-   # 'background-color': '#f8f9fa'
-}
-
+# the style arguments for the sidebar
+SIDEBAR_STYLE = {'position': 'fixed', 'top': 0, 'left': 0, 'bottom': 0,
+                  'width': '15%', 'padding': '20px 10px',
+                  # 'background-color': '#f8f9fa'
+                }
 # the style arguments for the main content page.
-CONTENT_STYLE = {
-    'margin-left': '15%',
-    'margin-right': '5%',
-    'top': 0,
-    'padding': '20px 10px'
-}
+CONTENT_STYLE = {'margin-left': '15%', 'margin-right': '5%', 'top': 0, 'padding': '20px 10px' }
+TEXT_STYLE = {'textAlign': 'justify', 'font-size': '14px'}
+CARD_TEXT_STYLE = {'textAlign': 'center'}
 
-TEXT_STYLE = {
-    'textAlign': 'justify',
-    'font-size': '14px',
-  #  'color': '#191970',
-
-}
-
-CARD_TEXT_STYLE = {
-    'textAlign': 'center',
-   # 'color': '#0074D9',
-}
-
-DROPDOWN_STYLE = dict( width='50%', display='inline-block')
-
-
+styles = {'sidebar': SIDEBAR_STYLE, 'content': CONTENT_STYLE,
+          'text': TEXT_STYLE, 'card_text': CARD_TEXT_STYLE,
+          }
 
 def date_graph():
     '''Creates graph of progress over time.
@@ -161,8 +143,14 @@ def date_graph():
                        markers=True,
                        )
     date_fig.update_layout()
+    date_fig.add_hline(y=recipe_by_date['recipe_count'].sum() / recipe_by_date.shape[0],
+                       line_dash="dot",
+                       line_color="grey",
+                       annotation_text="Average Per Month",
+                       annotation_position="right"
+                       )
     date_fig.add_annotation(x="2018-09-01", y=40,
-                       text="[Click on a dot to see breakdown by author]",
+                       text="[Click on any dot to see breakdown by author]",
                        showarrow=True,
                        arrowhead=2,
                             )
@@ -173,7 +161,7 @@ def facetted_date_graph():
     Returns plotly graph
     '''
     authors = ['Yotam Ottolenghi', 'Nigella Lawson', 'Sabrina Ghayour',
-               'Noor Murad', 'Jamie Oliver', 'Helen Goh',
+               'Noor Murad', 'Jamie Oliver', 'Meera Sodha',
                 'Georgina Hayden', 'Ixta Belfrage'
                ]
     sub_recipe_data = recipe_by_date_and_author.loc[recipe_by_date_and_author['author_name'].isin(authors)]
@@ -187,24 +175,20 @@ def facetted_date_graph():
                        )
     return fig
 
-author_date_fig = px.bar(recipe_by_date_and_author, x="date", y="recipe_count")
+#author_date_fig = px.bar(recipe_by_date_and_author, x="date", y="recipe_count")
 
 sidebar = html.Div(
-    [
-        html.H6("Contents", className="display-6"),
-        html.Hr(),
-        dbc.Nav(
-            [
-                dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Progress Over Time", href="/over-time", active="exact"),
-                dbc.NavLink("My Top", href="/my-top", active="exact"),
-                dbc.NavLink("Around The World", href="/around-the-world", active='exact')
-            ],
-            vertical=True,
-            pills=True,
-        ),
-    ],
-    style=SIDEBAR_STYLE,
+    [html.H6("Contents", className="display-6"),
+     html.Hr(),
+     dbc.Nav([dbc.NavLink("Home", href="/", active="exact"),
+              dbc.NavLink("Progress Over Time", href="/over-time", active="exact"),
+              dbc.NavLink("My Top", href="/my-top", active="exact"),
+              dbc.NavLink("Around The World", href="/around-the-world", active='exact')
+              ],
+             vertical=True,pills=True,
+             ),
+     ],
+    style=styles['sidebar'],
 )
 
 background_text = dcc.Markdown('''
@@ -222,10 +206,10 @@ background_text = dcc.Markdown('''
                             from my cookbooks that have been indexed (which is really most Anglophone books) 
                             in a digital format. I use that to bookmark every recipe 
                             I cook with the month and year when I cooked it. The assets I 
-                            enter (my cookbooks and bookmarks) is available for download as .csv files 
+                            enter (my cookbooks and bookmarks) are available for download as _.csv_ files 
                             directly from the website. Hurray! Having that database calls for some 
                             insights through cool visualisations. 
-                        ''', style=TEXT_STYLE)
+                        ''', style=styles['text'])
 
 around_the_world_text = dcc.Markdown('''
                             EYB tags some recipes with a category, which, among other things, could be a 
@@ -239,36 +223,41 @@ around_the_world_text = dcc.Markdown('''
                             maybe trends.\n 
                             
                             What would be the location tag for _za'atar cacio e pepe_?  
-                            ''', style=TEXT_STYLE)
+                            ''', style=styles['text'])
 
 def get_text_card(text, header_text):
     card_text = dbc.Card(
-        [ dbc.CardHeader(header_text, style=CARD_TEXT_STYLE),
+        [ dbc.CardHeader(header_text, style=styles['card_text']),
           dbc.CardBody([text]),
           ]#, style={ 'width' : '75%', 'height' : '50%'},
     )
     return card_text
 
-card_background = get_text_card(background_text, 'Background')
-
 def get_kpi_card(header, content):
-    card = dbc.Card([dbc.CardHeader(header, style=CARD_TEXT_STYLE),
+    card = dbc.Card([dbc.CardHeader(header, style=styles['card_text']),
                      dbc.CardBody(
-                         [ # html.H4("Time Period", className="card-title", style=CARD_TEXT_STYLE),
-                           html.P(content, className="card-text", style=CARD_TEXT_STYLE)
+                         [ # html.H4("Time Period", className="card-title", style=styles['card_text']),
+                           html.P(content, className="card-text", style=styles['card_text'])
                           ]
                          )
                      ]
                     )
     return card
 
-card_kpi_total_cookbooks = get_kpi_card("Total (Indexed) Cookbooks", f"{recipes['title'].nunique()}")
-card_kpi_timeframe = get_kpi_card('Time Period', f"{recipes['month_year'].min()} - {recipes['month_year'].max()}")
-card_kpi_total_recipes_cooked = get_kpi_card('Total Recipes Cooked', f"{recipe_by_date['recipe_count'].sum()}")
-card_kpi_avg_per_month = get_kpi_card("Average per Month", f"{round(recipe_by_date['recipe_count'].sum() / recipe_by_date.shape[0], 1)}")
-
+card_kpi_timeframe = get_kpi_card('Analysed Time Period',
+                                  f"{recipes['month_year'].min()} - {recipes['month_year'].max()}"
+                                  )
+card_kpi_total_cookbooks = get_kpi_card("Total (Indexed) Cookbooks",
+                                        f"{recipes[['book_id', 'title', 'subtitle']].drop_duplicates().shape[0]}"
+                                        )
+card_kpi_total_recipes_cooked = get_kpi_card('Total Recipes Cooked',
+                                             f"{recipe_by_date['recipe_count'].sum()}"
+                                             )
+card_kpi_avg_per_month = get_kpi_card("Average per Month",
+                                      f"{round(recipe_by_date['recipe_count'].sum() / recipe_by_date.shape[0], 1)}"
+                                      )
 cards_kpis = html.Div(
-    [dbc.CardHeader('KPIs', style=CARD_TEXT_STYLE),
+    [dbc.CardHeader('KPIs', style=styles['card_text']),
      html.Br(),
      dbc.CardBody(html.Div([
          dbc.Row([dbc.Col(card_kpi_total_cookbooks),
@@ -290,19 +279,21 @@ def b64_image(image_filename):
     return 'data:image/png;base64,' + base64.b64encode(image).decode('utf-8')
 
 def get_image_card(image_path, header):
-    card = dbc.Card( [dbc.CardHeader(header, style=CARD_TEXT_STYLE),
+    card = dbc.Card( [dbc.CardHeader(header, style=styles['card_text']),
                       dbc.CardImg(src=b64_image(image_path))
                       ],
                      #style={'height': '80%', 'width' : '65%'}
                      )
     return card
 
+
+card_background = get_text_card(background_text, 'Background')
 card_mybooks_picture_01 = get_image_card(IMAGE_PATH_01, 'My Bookshelf')
 card_mybooks_picture_02 = get_image_card(IMAGE_PATH_02, 'My Bookshelf')
 
-content_home = html.Div([dbc.Row([dbc.Col(card_mybooks_picture_02),
-                                  dbc.Col(card_background, width=5), #width = 8, md=3
-                                  dbc.Col(card_mybooks_picture_01)
+content_home = html.Div([dbc.Row([dbc.Col(card_mybooks_picture_02, sm=3),
+                                  dbc.Col(card_background, sm=6), #width = 8, md=3
+                                  dbc.Col(card_mybooks_picture_01, sm=3)
                                    ],
                                  align="center"
                                  ),
@@ -311,8 +302,8 @@ content_home = html.Div([dbc.Row([dbc.Col(card_mybooks_picture_02),
                          ])
 
 
-content_over_time = dbc.Card([dbc.CardHeader('Growth Rate by Month', style=CARD_TEXT_STYLE),
-                             dbc.CardBody([dbc.Button('Go Back', id='back-button', size="sm", color="dark",
+content_over_time = dbc.Card([dbc.CardHeader('Growth Rate by Month', style=styles['card_text']),
+                              dbc.CardBody([dbc.Button('Go Back', id='back-button', size="sm", color="dark",
                                                       className='col-1'# ml-2 col-1',
                                                       #style={'display': 'none'}
                                                     ),
@@ -322,7 +313,7 @@ content_over_time = dbc.Card([dbc.CardHeader('Growth Rate by Month', style=CARD_
                               ]
                              )
 
-content_over_time_by_author = dbc.Card([dbc.CardHeader('Growth Rate by Month Split By Author', style=CARD_TEXT_STYLE),
+content_over_time_by_author = dbc.Card([dbc.CardHeader('Growth Rate by Month Split By Author', style=styles['card_text']),
                                         dbc.CardBody(dbc.Row(dcc.Graph(figure=facetted_date_graph()), justify='center'))
                                         ])
 
@@ -332,7 +323,7 @@ content_over_time_by_author = dbc.Card([dbc.CardHeader('Growth Rate by Month Spl
 #                                      {'label': 'Top 10 Recipes', 'value': 'recipe_name'}
 #                                      ],
 #                             value='title',
-#                             style=DROPDOWN_STYLE,
+#                             style=styles['dropdown'],
 #                             )
 
 def get_top_graph(data, x_axis, y_axis, xaxis_title, yaxis_title):
@@ -344,22 +335,22 @@ def get_top_graph(data, x_axis, y_axis, xaxis_title, yaxis_title):
 top_cookbooks_graph = get_top_graph(recipe_by_date,
                                     recipe_by_cookbook['recipe_count'].to_list(),
                                     recipe_by_cookbook['title'].to_list(),
-                                    xaxis_title="Count",
+                                    xaxis_title="Number of Recipes Cooked from Title",
                                     yaxis_title='Cookbook Title'
                                     )
 
 top_authors_graph = get_top_graph(recipe_by_author,
                                   recipe_by_author['recipe_count'].to_list(),
                                   recipe_by_author['author_name'].to_list(),
-                                  xaxis_title="Count",
+                                  xaxis_title="Number of Recipes Cooked from Author",
                                   yaxis_title='Author'
                                   )
 
 top_recipes_graph = get_top_graph(recipe_counts,
                                   recipe_counts['count'].to_list(),
                                   recipe_counts['recipe_name'].to_list(),
-                                  xaxis_title="Count",
-                                  yaxis_title='Recipe'
+                                  xaxis_title="Number of Times Recipe Cooked",
+                                  yaxis_title='Recipe Name'
                                   )
 def get_top_content(figure, graph_id):
     top_content = dbc.Card(
@@ -398,7 +389,7 @@ def get_choropleth(recipe_location_data):
                              )
     return choropleth
 
-card_around_the_world_map = dbc.Card([dbc.CardHeader('Map (Hover Over Country)', style=CARD_TEXT_STYLE),
+card_around_the_world_map = dbc.Card([dbc.CardHeader('Map (Hover Over Country)', style=styles['card_text']),
                                      dbc.CardBody(dbc.Row(dcc.Graph(figure=get_choropleth(location_counts_df)), justify='center'))
                                      ]
                                     )
@@ -406,16 +397,18 @@ card_around_the_world_map = dbc.Card([dbc.CardHeader('Map (Hover Over Country)',
 
 card_around_the_world_background = get_text_card(around_the_world_text, 'About the Data')
 
-content_around_the_world = html.Div([dbc.Row([dbc.Col(card_around_the_world_map),
-                                              dbc.Col(card_around_the_world_background, md=3), #width = 8, md=3
+content_around_the_world = html.Div([dbc.Row([dbc.Col(card_around_the_world_map, sm=8),
+                                              dbc.Col(card_around_the_world_background, sm=4), #width = 8, md=3
                                               ],
                                              align="center"
                                              ),
                                      ])
 
-content = html.Div(id="page-content", style=CONTENT_STYLE)
+content = html.Div(id="page-content", style=styles['content'])
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.SANDSTONE])
+app = Dash(__name__, external_stylesheets=[dbc.themes.SANDSTONE],
+           meta_tags=[{'name': 'viewport', 'content': 'width=device-width, initial-scale=1'}]
+           )
 app.title = "Insights from EYB"
 app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 application = app.server
@@ -493,8 +486,8 @@ def render_page_content(pathname):
     if pathname == "/":
         return html.Div(
             children=
-            [ html.H2('Data Visualisation in the Kitchen', style=CARD_TEXT_STYLE),
-              html.H4('Where Food & Data Meet', style=CARD_TEXT_STYLE),
+            [ html.H2('Data Visualisation in the Kitchen', style=styles['card_text']),
+              html.H4('Where Food & Data Meet', style=styles['card_text']),
               html.Br(),
               html.P(content_home),
               ]
@@ -502,7 +495,7 @@ def render_page_content(pathname):
     elif pathname == "/over-time":
         return html.Div(
             children=
-            [ html.H4("Progress Over Time", style=CARD_TEXT_STYLE),
+            [ html.H4("Progress Over Time", style=styles['card_text']),
               html.Br(),
               html.P(content_over_time),
               html.Br(),
@@ -512,7 +505,7 @@ def render_page_content(pathname):
     elif pathname == "/my-top":
             return html.Div(
                 children=
-                [html.H4("My Top Cookbooks/ Authors / Recipes", style=CARD_TEXT_STYLE),
+                [html.H4("My Top Cookbooks/ Authors / Recipes", style=styles['card_text']),
                 html.Br(),
                 html.P(content_my_top)
                 ]
@@ -520,7 +513,7 @@ def render_page_content(pathname):
     elif pathname == '/around-the-world':
         recipe_count = recipe_location_df.shape[0]
         return html.Div(
-                children=[html.H4(f'Around The World in {recipe_count} Recipes', style=CARD_TEXT_STYLE),
+                children=[html.H4(f'Around The World in {recipe_count} Recipes', style=styles['card_text']),
                           html.Br(),
                           html.P(content_around_the_world)
                           ]
@@ -540,7 +533,7 @@ def render_page_content(pathname):
 app.config['suppress_callback_exceptions']=True
 
 # if __name__=='__main__':
-#     application.run(host='0.0.0.0', port='8080')
-#
+#      application.run(host='0.0.0.0', port='8080')
+
 if __name__ == '__main__':
     app.run_server(debug=True)
