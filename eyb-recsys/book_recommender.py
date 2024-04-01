@@ -1,7 +1,5 @@
 import json
 import numpy as np
-import pandas as pd
-from pathlib import Path
 from scipy.sparse import load_npz, csr_matrix
 
 class BookRecommender:
@@ -11,7 +9,7 @@ class BookRecommender:
         self.similarities = load_npz(similarity_matrix_filepath)
         with open(item_mapping_filepath, 'r') as f:
             self.item_mapping = json.load(f)
-        self.user_history = [str(item) for item in user_history]
+        self.user_history = user_history
 
     def get_recommendations(self, top_n=12):
         user_vector = np.zeros(self.similarities.shape[0])
@@ -27,22 +25,5 @@ class BookRecommender:
 
         top_items = [item for item, index in self.item_mapping.items()
                      if index in top_item_indices]
-
-        recommended_items = [item for item in top_items if item not in self.user_history][:top_n]
+        recommended_items = [item for item in top_items if item not in self.user_history][:top_n+1]
         return recommended_items
-
-# if __name__ == '__main__':
-#     assets_path = Path(__file__).parent.parent / 'assets' / '2024-02-01' / 'in'
-#
-#     book_shelf_filepath = assets_path / 'shelf_book.at-least-10-in-common.csv'
-#     authorship_filepath = assets_path / 'book_authorship.csv'
-#     author_filepath = assets_path / 'author.csv'
-#
-#     # Get the recommendations based on the computed similarities
-#     book_shelf_df = pd.read_csv(book_shelf_filepath)
-#     authorship_df = pd.read_csv(authorship_filepath)
-#     author_df = pd.read_csv(author_filepath)
-#
-#     user_histories = book_shelf_df.loc[book_shelf_df['shelf_id']=='ksa']['book_id'].to_list()
-#     recommender = BookRecommender(user_histories)
-#     recommendations = recommender.get_recommendations()[:12]

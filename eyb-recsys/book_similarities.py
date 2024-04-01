@@ -9,7 +9,6 @@ class ItemSimilarityConstructor:
     def __init__(self, user_item_filepath, outpath):
         self.user_item_df = pd.read_csv(user_item_filepath)
         print('User Item Matrix Shape', self.user_item_df.shape)
-        self.user_item_df['book_id'] = self.user_item_df['book_id'].astype(str)
         self.outpath = outpath
 
     def _create_user_item_matrix(self):
@@ -32,12 +31,11 @@ class ItemSimilarityConstructor:
 
         # Create a CSR sparse matrix
         user_item_matrix = csr_matrix((data, (rows, cols)), shape=(num_users, num_items))
-        print('User Item Matrix', user_item_matrix)
 
         save_npz(self.outpath + '/user_item_matrix.npz', user_item_matrix)
 
         user_index_mapping = {user_id: index for index, user_id in enumerate(user_ids)}
-        item_index_mapping = {item_id: index for index, item_id in enumerate(item_ids)}
+        item_index_mapping = {int(item_id): index for index, item_id in enumerate(item_ids)}
 
         with open(self.outpath + '/user_mapping.json', 'w') as f:
             json.dump(user_index_mapping, f)
@@ -49,6 +47,6 @@ class ItemSimilarityConstructor:
     def compute_item_similarities(self):
         user_item_matrix = self._create_user_item_matrix()
         similarities = cosine_similarity(user_item_matrix.T, dense_output=False)
-        print('Computed similarities are:', similarities)
+        #print('Computed similarities are:', similarities)
         print('Similarities matrix shape', similarities.shape)
         save_npz(self.outpath + '/similarities.npz', similarities)

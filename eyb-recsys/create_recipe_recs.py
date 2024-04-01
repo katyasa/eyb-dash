@@ -58,7 +58,9 @@ if __name__ == "__main__":
 
     # drop recipes from Larousse Gastronomique as they are boring
     merged_df = merged_df.loc[~merged_df['book_id'].isin(['8033'])]
-    merged_df = merged_df.drop_duplicates(subset=['recipe_id', 'recipe_name', 'book_id'])
+    merged_df = merged_df.drop_duplicates(subset=['recipe_id'])
+    merged_df['recipe_name'] = merged_df['recipe_name'] + ' <> ' + merged_df['title']
+
     recipe_ingredient_cooked_df = merged_df.loc[
         merged_df["recipe_id"].isin(recipe_cooked_df.recipe_id.unique())]
     recipe_ingredient_cooked_df = \
@@ -72,14 +74,14 @@ if __name__ == "__main__":
         recipe_ingredient_not_cooked_df.groupby(['recipe_id', 'recipe_name'])['ingredient_name']\
         .agg(list).reset_index()
 
-
-
     print(f'Total (unique) recipes: {merged_df.recipe_id.nunique()}')
     print(f'Total (unique) recipes cooked: {recipe_ingredient_cooked_df.recipe_id.nunique()}')
     print(f'Total (unique) recipes not cooked: {recipe_ingredient_not_cooked_df.recipe_id.nunique()}')
     print(merged_df.columns)
+
     vectorizer = Vectorizer()
     tfidf_matrix = vectorizer.fit_transform(merged_df)
+    print('TFIDF Matrix shape', tfidf_matrix.shape)
     recommender = RecipeRecommender(merged_df, tfidf_matrix)
     recommendations = []
     for recipe_name, recipe_id, author_name, title, url, recipe_image_path, bookmark_name in \
@@ -92,7 +94,7 @@ if __name__ == "__main__":
                      merged_df['bookmark_name']
                      ),
                  total=len(merged_df)):
-        recs = recommender.get_recommendations(recipe_name, 300)
+        recs = recommender.get_recommendations(recipe_name, top_n=36)
         recommendations.append({'recipe_name': recipe_name,
                                 'recipe_id': recipe_id,
                                 'author_name': author_name,
