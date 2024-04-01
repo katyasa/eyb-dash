@@ -12,6 +12,7 @@ import os
 import base64
 import pandas as pd
 import dash
+from pathlib import Path
 from dash import Dash, html, dcc, Input, Output
 from dash_bootstrap_templates import load_figure_template
 import dash_bootstrap_components as dbc
@@ -24,15 +25,17 @@ import plotly.express as px
 load_figure_template(["minty", "sandstone"])
 
 # load the dataset
-DATA_FOLDER = 'assets/2023-03-11'
-IMAGE_PATH_01 = 'assets/cookbooks01.JPG'
-IMAGE_PATH_02 = 'assets/cookbooks02.JPG'
+DATA_FOLDER = Path(__file__).parent.parent / 'assets'
+IMAGE_PATH_01 = DATA_FOLDER.joinpath('cookbooks01.JPG')
+IMAGE_PATH_02 = DATA_FOLDER.joinpath('cookbooks02.JPG')
 START_DATE = '2018-01-01'
-END_DATE = '2023-03-01'
+END_DATE = '2024-01-01'
 
-file_path = os.path.join(DATA_FOLDER, 'recipe_data.csv')
+MARCH_FILES_PATH = DATA_FOLDER.joinpath('2024-01-01/out')
+file_path = MARCH_FILES_PATH / 'recipe_data.csv'
 recipes_df = pd.read_csv(file_path)
-recipe_location_df = pd.read_csv(os.path.join(DATA_FOLDER, 'recipe_data_location.csv')).dropna()
+recipe_location_path = MARCH_FILES_PATH / 'recipe_data_location.csv'
+recipe_location_df = pd.read_csv(recipe_location_path).dropna()
 location_counts_df = recipe_location_df['location'].value_counts().reset_index()
 location_counts_df = location_counts_df.rename(columns={'location': 'count', 'index': 'country'})
 
@@ -181,7 +184,7 @@ sidebar = html.Div(
     [html.H6("Contents", className="display-6"),
      html.Hr(),
      dbc.Nav([dbc.NavLink("Home", href="/", active="exact"),
-              dbc.NavLink("Progress Over Time", href="/over-time", active="exact"),
+              dbc.NavLink("Progress Over Time", href="/1_👩‍🍳_whisk_through_time.py", active="exact"),
               dbc.NavLink("My Top", href="/my-top", active="exact"),
               dbc.NavLink("Around The World", href="/around-the-world", active='exact')
               ],
@@ -492,7 +495,7 @@ def render_page_content(pathname):
               html.P(content_home),
               ]
         )
-    elif pathname == "/over-time":
+    elif pathname == "/1_👩‍🍳_whisk_through_time.py":
         return html.Div(
             children=
             [ html.H4("Progress Over Time", style=styles['card_text']),

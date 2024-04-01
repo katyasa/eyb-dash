@@ -1,9 +1,9 @@
 FROM python:3.10.9
 ENV DASH_DEBUG_MODE True
 
-COPY ./assets/ /assets/
-COPY ./application.py /application.py
-COPY ./requirements.txt /requirements.txt
+COPY ../assets /assets/
+COPY application.py /application.py
+COPY requirements.txt /requirements.txt
 
 WORKDIR /
 
