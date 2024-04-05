@@ -117,6 +117,8 @@ recipe_dates_cooked_author_name_book = recipe_dates_cooked_author_name_book.merg
                                                                                   left_on='book_id',
                                                                                   right_on='id',
                                                                                   how='left')
+recipe_dates_cooked_author_name_book['recipe_name'] = \
+    recipe_dates_cooked_author_name_book['recipe_name'] + ' <> ' + recipe_dates_cooked_author_name_book['title']
 recipe_dates_cooked_author_name_book.drop(columns=['id'], inplace=True)
 
 print("----------------------------------------------------------------------")
@@ -184,6 +186,8 @@ print(recipe_dates_cooked_author_name.head(), recipe_dates_cooked_author_name.sh
 print(recipe_dates_cooked_author_name_book.head(), recipe_dates_cooked_author_name_book.shape)
 print(recipe_location.head(), recipe_location.shape)
 
+recipe_dates_cooked_author_name_book = recipe_dates_cooked_author_name_book.drop_duplicates(subset=['recipe_name'])
+recipe_dates_cooked_author_name_book = recipe_dates_cooked_author_name_book.reset_index(drop=True)
 recipe_dates_cooked_author_name_book.to_csv(data_folder_path_out + '/recipe_data.csv', index=False)
 recipe_location.to_csv(data_folder_path_out + '/recipe_data_location.csv', index=False)
 print("----------------------------------------------------------------------")

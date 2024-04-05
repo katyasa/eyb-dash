@@ -13,7 +13,7 @@ if __name__ == "__main__":
     author_df = pd.read_csv(assets_path / 'in' / 'author.csv')
     author_df = pd.read_csv(assets_path / 'in' / 'author.csv')
     recipe_authorship_df = pd.read_csv(assets_path / 'in' / 'recipe_authorship.csv')
-    book_df = pd.read_csv(assets_path / 'in' / 'book.csv')
+    book_df = pd.read_csv(assets_path / 'in' / 'book.csv', dtype={'id': int})
     bookmark_df = pd.read_csv(assets_path / 'in' / 'recipe_bookmark.csv')
     # I only need the dates when something was cooked
     bookmark_df = bookmark_df[~bookmark_df['bookmark_name'].isin(['Ottolenghi Guardian Book',
@@ -45,11 +45,17 @@ if __name__ == "__main__":
                  'author_name': lambda x: ' & '.join(x)}
 
     merged_df = merged_df.groupby('recipe_id', as_index=False).agg(agg_funcs)
+
+    # merge with book to get the title
     merged_df = pd.merge(merged_df, book_df[['id', 'title']], left_on='book_id', right_on='id', how='left')
     merged_df['title'] = merged_df['title'].fillna('Online recipe')
+    merged_df['recipe_name'] = merged_df['recipe_name'] + ' <> ' + merged_df['title']
+
+    counts = merged_df['recipe_name'].value_counts()
+    df_filtered = merged_df[merged_df['recipe_name'].isin(counts[counts >= 2].index)]
 
     # merge with recipe image paths
-    recipe_images_df = pd.read_csv(str(assets_path / 'out' / 'recipe_image_path.csv'))
+    recipe_images_df = pd.read_csv(str(assets_path / 'out' / 'image_url.csv'))
     merged_df = pd.merge(merged_df, recipe_images_df, on='recipe_id', how='left')
 
     # merge with recipe bookmarks to see how many items a recipe was cooked
@@ -57,9 +63,11 @@ if __name__ == "__main__":
     merged_df = pd.merge(merged_df, bookmark_df, on='recipe_id', how='left')
 
     # drop recipes from Larousse Gastronomique as they are boring
-    merged_df = merged_df.loc[~merged_df['book_id'].isin(['8033'])]
-    merged_df = merged_df.drop_duplicates(subset=['recipe_id'])
-    merged_df['recipe_name'] = merged_df['recipe_name'] + ' <> ' + merged_df['title']
+    merged_df = merged_df.loc[~merged_df['book_id'].isin([43535])]
+
+    merged_df = merged_df.drop_duplicates(subset=['recipe_name']).reset_index(drop=True)
+
+#    merged_df = merged_df.head(5000)
 
     recipe_ingredient_cooked_df = merged_df.loc[
         merged_df["recipe_id"].isin(recipe_cooked_df.recipe_id.unique())]
@@ -84,27 +92,27 @@ if __name__ == "__main__":
     print('TFIDF Matrix shape', tfidf_matrix.shape)
     recommender = RecipeRecommender(merged_df, tfidf_matrix)
     recommendations = []
-    for recipe_name, recipe_id, author_name, title, url, recipe_image_path, bookmark_name in \
+    for recipe_name, recipe_id, author_name, title, url, image_url, bookmark_name in \
             tqdm(zip(merged_df['recipe_name'],
                      merged_df['recipe_id'],
                      merged_df['author_name'],
                      merged_df['title'],
                      merged_df['url'],
-                     merged_df['recipe_image_path'],
+                     merged_df['image_url'],
                      merged_df['bookmark_name']
                      ),
                  total=len(merged_df)):
-        recs = recommender.get_recommendations(recipe_name, top_n=36)
+        recs = recommender.get_recommendations(recipe_name, top_n=200)
         recommendations.append({'recipe_name': recipe_name,
                                 'recipe_id': recipe_id,
                                 'author_name': author_name,
                                 'book_title': title,
                                 'url': url,
-                                'recipe_image_path': recipe_image_path,
+                                'image_url': image_url,
                                 'bookmark_name': bookmark_name,
                                 'recs': recs
                                 })
 
     # Create DataFrame from list of dictionaries with specified index
     recs_df = pd.DataFrame(recommendations)
-    recs_df.to_json(assets_path / 'out' / 'recs.json', orient='records')
+    recs_df.to_json(assets_path / 'out' / 'recipe_recs.json', orient='records')

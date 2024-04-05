@@ -2,23 +2,27 @@ import sys
 from pathlib import Path
 import streamlit as st
 import pandas as pd
-book_recommender_path = Path(__file__).parent.parent.parent / 'eyb-recsys'
-sys.path.insert(0, str(book_recommender_path))
-from book_recommender import BookRecommender
+import json
 
+@st.cache_data
 def load_data(assets_path):
     book_shelf_filepath = assets_path / 'in' / 'shelf_book.at-least-25-in-common.csv'
     authorship_filepath = assets_path / 'in' / 'book_authorship.csv'
     author_filepath = assets_path / 'in' / 'author.csv'
     book_filepath = assets_path / 'in' / 'book.csv'
     book_country_filepath = assets_path / 'in' / 'book_country.csv'
+    book_recs_filepath = assets_path / 'out' / 'book_recs.json'
 
     book_shelf_df = pd.read_csv(book_shelf_filepath, dtype={'book_id': str})
     authorship_df = pd.read_csv(authorship_filepath, dtype={'book_id': str})
     author_df = pd.read_csv(author_filepath)
     book_df = pd.read_csv(book_filepath, dtype={'id': str})
     book_country_df = pd.read_csv(book_country_filepath, dtype={'book_id': str})
-    return book_shelf_df, authorship_df, author_df, book_df, book_country_df
+    with open(book_recs_filepath, 'r') as f:
+        recs_data = json.load(f)
+
+    recommendations = [list(item.values())[0] for item in recs_data]
+    return book_shelf_df, authorship_df, author_df, book_df, book_country_df, recommendations
 
 def filter_history_by_authors(my_user_history, selected_authors, author_df, authorship_df):
     selected_author_ids = author_df.loc[author_df['name'].isin(selected_authors), 'id'].tolist()
@@ -28,17 +32,21 @@ def filter_history_by_authors(my_user_history, selected_authors, author_df, auth
     my_user_history = [book_id for book_id in my_user_history if book_id in selected_book_ids]
     return my_user_history
 
-def filter_recommendations_by_country(recommendations, selected_countries):
-    if selected_countries:
-        print('Selected countries', selected_countries)
-        recommendations = [rec for rec in recommendations if rec in selected_countries][:18]
+def filter_recommendations_by_country(recommendations, selected_countries, book_country_df):
+    # filter the book country dataframe to only rows of the selected_countries
+    filtered_book_country_df = book_country_df[book_country_df['country_name'].isin(selected_countries)]
+
+    # Filter the list of book_ids to only those in the filtered dataframe
+    recommendations = \
+        [book_id for book_id in recommendations if book_id in filtered_book_country_df['book_id'].values][:18]
     return recommendations
 
-def display_recommendations(recommendations, book_df):
+def display_recommendations(recommendations, book_df, top_n):
     # Map book IDs to cover image URLs, book URLs, and titles
     book_id_to_cover_image_url = pd.Series(book_df['cover_image_url'].values, index=book_df.id).to_dict()
     book_id_to_url = pd.Series(book_df['url'].values, index=book_df.id).to_dict()
     book_id_to_title = pd.Series(book_df['title'].values, index=book_df.id).to_dict()
+    recommendations = recommendations[:top_n]
     if len(recommendations) > 0:
         num_items = st.sidebar.slider("How many books to display", 1, len(recommendations), len(recommendations))
         num_columns = 6
@@ -69,11 +77,6 @@ def display_recommendations(recommendations, book_df):
         st.write('No books found.')
 
 def main():
-    assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-02-01'
-    similarities_filepath = assets_path / 'out' / 'similarities.npz'
-    item_mapping_filepath = assets_path / 'out' / 'item_mapping.json'
-
-    book_shelf_df, authorship_df, author_df, book_df, book_country_df = load_data(assets_path)
 
     st.set_page_config(
         page_title="Next on the Bookshelf",
@@ -82,45 +85,27 @@ def main():
 
     st.title("Data's Choice: What's next on the Book Shelf?")
 
-    my_user_history = book_shelf_df.loc[book_shelf_df['shelf_id'] == 'ksa']['book_id'].to_list()
+    assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-02-01'
 
-    # my_authorids = authorship_df.loc[authorship_df['book_id'].isin(my_user_history)]['author_id'].tolist()
-    # my_authors = author_df.loc[author_df['id'].isin(my_authorids), 'name'].tolist()
-    # selected_authors = st.sidebar.multiselect('Filter user history:', my_authors)
-    # print('Selected authors', selected_authors)
-    # if selected_authors:
-    #     my_user_history = filter_history_by_authors(my_user_history, selected_authors, author_df, authorship_df)
-
-    print(79*'-')
-    print('My User History', my_user_history, len(my_user_history))
-    print(79*'-')
-
-    # Get recommendations
-    recommender = BookRecommender(user_history=my_user_history,
-                                  similarity_matrix_filepath=similarities_filepath,
-                                  item_mapping_filepath=item_mapping_filepath
-                                  )
-
-    recommendations = recommender.get_recommendations()
-
+    book_shelf_df, authorship_df, author_df, book_df, book_country_df, recommendations = \
+        load_data(assets_path)
     # skip recommendations not contained in book.csv as those have no extra information
     recommendations = [rec for rec in recommendations if rec in book_df['id'].values]
 
-    # # add an option to filter the recommended books by country:
-    # my_countries = book_country_df['country_name'].unique()
-    # selected_countries = st.sidebar.multiselect('Select country:', my_countries)
-    # if selected_countries:
-    #     recommendations = filter_recommendations_by_country(recommendations, selected_countries)[:18]
-    # else:
-    #     recommendations = recommendations[:18]
-    #
-    # if st.session_state.get('prev_recommendations') != recommendations:
-    #     st.session_state['prev_recommendations'] = recommendations
-    #     st.rerun()
+    # add an option to filter the recommended books by country:
+    my_countries = book_country_df['country_name'].unique()
+    selected_countries = st.sidebar.multiselect('Select country:', my_countries)
+    if selected_countries:
+        recommendations = filter_recommendations_by_country(recommendations, selected_countries, book_country_df)
+
+
+    if st.session_state.get('prev_recommendations') != recommendations:
+        st.session_state['prev_recommendations'] = recommendations
+        st.rerun()
 
     print('Recommendations:', recommendations)
 
-    display_recommendations(recommendations, book_df)
+    display_recommendations(recommendations, book_df, top_n=18)
 
 
 if __name__ == "__main__":

@@ -6,5 +6,16 @@ To get all running, there are several steps:
    So this merges all neatly into a single output csv.
 4. To get the recipe recommendations, run `create_recipe_recs.py`. This outputs `recs.json`
 5. To get the book similarities, run `create_book_similarities`. This creates the similarity matrix and the item mappings which are then used by the
-   app to compute the recommendations given user history. This happens on the fly when loading the app. It's a bit slow with large matrixes. Buuu!
-6. Now run the app with `streamlit run 0_....`  
+   app to compute the recommendations given user history. 
+6. To get the book recommendations, run `create_book_recs.py`. This 
+   computes the similarities given my own user history. To slow to do it on 
+   the fly online
+7. Now run the app with `streamlit run 0_....`  
+
+
+## Recipes for the demo: 
+* pea & ham pasta
+* lasagne of love
+* ultimate traybake ragu
+* walnut and halva cake
+* celebration cake
