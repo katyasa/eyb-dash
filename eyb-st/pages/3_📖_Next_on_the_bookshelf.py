@@ -41,12 +41,30 @@ def filter_recommendations_by_country(recommendations, selected_countries, book_
         [book_id for book_id in recommendations if book_id in filtered_book_country_df['book_id'].values][:18]
     return recommendations
 
-def display_recommendations(recommendations, book_df, top_n):
+import random
+
+def display_recommendations(recommendations, book_df, book_country_df, top_n=18):
     # Map book IDs to cover image URLs, book URLs, and titles
     book_id_to_cover_image_url = pd.Series(book_df['cover_image_url'].values, index=book_df.id).to_dict()
     book_id_to_url = pd.Series(book_df['url'].values, index=book_df.id).to_dict()
     book_id_to_title = pd.Series(book_df['title'].values, index=book_df.id).to_dict()
-    recommendations = recommendations[:top_n]
+
+    feel_lucky = st.sidebar.checkbox('I feel lucky', value=False)
+    if feel_lucky:
+        random_books = random.sample(recommendations[:200], 2)
+        recommendations = [ rec for rec in recommendations if rec not in random_books][:top_n-2]
+        for random_book in random_books:
+            recommendations.insert(random.randint(0, min(12, len(recommendations))), random_book)
+
+    # add an option to filter the recommended books by country:
+    my_countries = book_country_df['country_name'].unique()
+    selected_countries = st.sidebar.multiselect('Select country:', my_countries)
+    if selected_countries:
+        recommendations = filter_recommendations_by_country(recommendations, selected_countries, book_country_df)
+
+    else:
+        recommendations = recommendations[:top_n]
+
     if len(recommendations) > 0:
         num_items = st.sidebar.slider("How many books to display", 1, len(recommendations), len(recommendations))
         num_columns = 6
@@ -83,7 +101,7 @@ def main():
         page_icon="📖",
     )
 
-    st.title("Data's Choice: What's next on the Book Shelf?")
+    st.title("What's next on the Book Shelf?")
 
     assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-02-01'
 
@@ -92,20 +110,11 @@ def main():
     # skip recommendations not contained in book.csv as those have no extra information
     recommendations = [rec for rec in recommendations if rec in book_df['id'].values]
 
-    # add an option to filter the recommended books by country:
-    my_countries = book_country_df['country_name'].unique()
-    selected_countries = st.sidebar.multiselect('Select country:', my_countries)
-    if selected_countries:
-        recommendations = filter_recommendations_by_country(recommendations, selected_countries, book_country_df)
-
-
     if st.session_state.get('prev_recommendations') != recommendations:
         st.session_state['prev_recommendations'] = recommendations
         st.rerun()
 
-    print('Recommendations:', recommendations)
-
-    display_recommendations(recommendations, book_df, top_n=18)
+    display_recommendations(recommendations, book_df, book_country_df, top_n=18)
 
 
 if __name__ == "__main__":

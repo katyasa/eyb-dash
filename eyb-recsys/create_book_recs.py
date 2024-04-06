@@ -26,5 +26,4 @@ if __name__ == "__main__":
 
     recommendations = recommender.get_recommendations(top_n=5000)
     recs_df = pd.DataFrame(recommendations)
-    print(recs_df)
     recs_df.to_json(assets_path / 'out' / 'book_recs.json', orient='records')

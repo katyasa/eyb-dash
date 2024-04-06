@@ -7,20 +7,20 @@ assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-02-01'
 images_path = assets_path / 'images' / 'recipes'
 recs_filepath = assets_path / 'out' / 'recipe_recs.json'
 recipe_categories_filepath = assets_path / 'in' / 'recipe_category.csv'
-author_filepath = assets_path / 'in' / 'author.csv'
+recipe_data_filepath = assets_path / 'out' / 'recipe_data.csv'
 recipe_authorship_filepath = assets_path / 'in' / 'recipe_authorship.csv'
 
 @st.cache_data
-def load_data(recs_filepath, recipe_categories_filepath, author_filepath, recipe_authorship_filepath):
+def load_data(recs_filepath, recipe_categories_filepath, recipe_data_filepath, recipe_authorship_filepath):
     with open(recs_filepath, 'r') as f:
         recipe_recs_data = json.load(f)
     recipe_categories = pd.read_csv(recipe_categories_filepath)
-    author_df = pd.read_csv(author_filepath)
+    recipe_data_df = pd.read_csv(recipe_data_filepath)
     recipe_authorship_df = pd.read_csv(recipe_authorship_filepath)
-    return recipe_recs_data, recipe_categories, author_df, recipe_authorship_df
+    return recipe_recs_data, recipe_categories, recipe_data_df, recipe_authorship_df
 
-recipe_recs_data, recipe_categories, author_df, recipe_authorship_df = \
-    load_data(recs_filepath, recipe_categories_filepath, author_filepath, recipe_authorship_filepath)
+recipe_recs_data, recipe_categories, recipe_data_df, recipe_authorship_df = \
+    load_data(recs_filepath, recipe_categories_filepath, recipe_data_filepath, recipe_authorship_filepath)
 
 # Get the seeds - all items from the recipe recommendations data.
 SEEDS = [item['recipe_name'] for item in recipe_recs_data]
@@ -34,14 +34,14 @@ def display_seed_recipe_details(selected_recipe):
     filtered_recipe = filter_recipes(selected_recipe)
     # Display image if URL exists
     if filtered_recipe['image_url']:
-        st.image(filtered_recipe['image_url'])
+        st.image(filtered_recipe['image_url'], use_column_width=True)
     recipe_url = filtered_recipe['url']
     recipe_name = filtered_recipe['recipe_name'].split('<>')[0]
     st.markdown(f"[{recipe_name}]({recipe_url})")
-    st.write(f"**Author:** {filtered_recipe['author_name']}")
-    st.write(f"**Book:** {filtered_recipe['book_title']}")
+    st.write(f"**Author:**  \n{filtered_recipe['author_name']}")
+    st.write(f"**Book:**  \n {filtered_recipe['book_title']}")
     if filtered_recipe['bookmark_name']:
-        st.write(f"**Made on** {filtered_recipe['bookmark_name']}")
+        st.write(f"**Made on:**  \n {filtered_recipe['bookmark_name']}")
 
 def filter_dict_by_category(recipe_dict, id_list):
     # Filter the 'recs' list in the dictionary
@@ -63,7 +63,7 @@ def display_filtered_recipes(filtered_recipes, num_items):
 
         for idx, rec in enumerate(row_recs):
             try:
-                columns[idx].image(rec['image_url'], width=image_size[0])
+                columns[idx].image(rec['image_url'], width=image_size[0],use_column_width=True)
             except Exception as e:
                 pass
             columns[idx].write(f"[{rec['recipe_rec']}]({rec['url']})")
@@ -74,8 +74,8 @@ def recipe_search(recipe_name):
     print(len(filtered_recipes['recs']))
 
     # Display filtered recipes
-    recipe_name = recipe_name.split('<>')[0]
-    st.subheader(f'More Shared Flavours with {recipe_name}')
+    recipe_name = recipe_name.split('<>')[0].strip()
+    st.subheader(f'More Shared Flavours with *{recipe_name}*')
 
     # optional filter by category
     unique_categories = recipe_categories['category_name'].unique()
@@ -86,9 +86,9 @@ def recipe_search(recipe_name):
         filtered_recipes = filter_dict_by_category(filtered_recipes, selected_ids)
 
     # optional filter by author
-    unique_authors = author_df['name'].unique()
+    unique_authors = recipe_data_df['author_name'].unique()
     selected_authors = st.sidebar.multiselect('Only from this author...', sorted(unique_authors))
-    selected_authors_ids = author_df.loc[author_df['name'].isin(selected_authors)]['id']
+    selected_authors_ids = recipe_data_df.loc[recipe_data_df['author_name'].isin(selected_authors)]['author_id']
     recipe_ids_by_selected_authors = \
         recipe_authorship_df.loc[recipe_authorship_df['author_id'].isin(selected_authors_ids)]['recipe_id'].tolist()
     if selected_authors:
@@ -110,13 +110,13 @@ def recipe_search(recipe_name):
         st.rerun()
 
 def main():
-    st.title("Data's Choice: What's Next on the Menu?")
+    st.title("What's Next on the Menu?")
     with st.sidebar:
         selected_recipe = st.selectbox(
             "Select Recipe",
             options=SEEDS
         )
-        with st.expander("Seed recipe details"):
+        with st.expander("Recipe details"):
             display_seed_recipe_details(selected_recipe)
 
     recipe_search(selected_recipe)

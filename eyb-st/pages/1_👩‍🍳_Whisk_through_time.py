@@ -3,7 +3,7 @@ import pandas as pd
 import altair as alt
 import plotly.express as px
 START_DATE = '2018-01-01'
-END_DATE = '2024-02-01'
+END_DATE = '2024-03-31'
 from pathlib import Path
 
 st.set_page_config(
@@ -127,7 +127,7 @@ def date_graph_altair(data, author_data):
 
 
 def plot_over_time():
-    st.title('Whisking Through the Ages: Culinary Adventure Through Time')
+    st.title('Whisking Through Time')
 
     date_graph_altair(recipe_by_date, recipe_by_date_and_author)
 

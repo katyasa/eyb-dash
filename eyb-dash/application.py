@@ -29,7 +29,7 @@ DATA_FOLDER = Path(__file__).parent.parent / 'assets'
 IMAGE_PATH_01 = DATA_FOLDER.joinpath('cookbooks01.JPG')
 IMAGE_PATH_02 = DATA_FOLDER.joinpath('cookbooks02.JPG')
 START_DATE = '2018-01-01'
-END_DATE = '2024-01-01'
+END_DATE = '2024-03-31'
 
 MARCH_FILES_PATH = DATA_FOLDER.joinpath('2024-01-01/out')
 file_path = MARCH_FILES_PATH / 'recipe_data.csv'
