@@ -23,7 +23,7 @@ def create_csv_with_image_paths(recipe_file, images_file, outfile):
 
 
 if __name__ == '__main__':
-    assets_path = Path(__file__).parent / 'assets' / '2024-02-01'
+    assets_path = Path(__file__).parent / 'assets' / '2024-04-07'
     recipe_file = assets_path / 'in' / 'recipe.csv'
     recipe_images_manual = assets_path / 'out' / 'recipe_image_url_manual.csv'
     outfile = assets_path / 'out' / 'image_url.csv'

@@ -5,9 +5,12 @@ from recipe_vectorizer import Vectorizer
 from recipe_recommender import RecipeRecommender
 
 if __name__ == "__main__":
-    assets_path = Path(__file__).parent.parent / 'assets' / '2024-02-01'
+    assets_path = Path(__file__).parent.parent / 'assets' / '2024-04-07'
 
     recipe_cooked_df = pd.read_csv(str(assets_path / 'out' / 'recipe_data.csv'))
+
+    recipe_cook_df = recipe_cooked_df.drop_duplicates(subset=['recipe_name'])
+
     recipe_ingredient = pd.read_csv(assets_path / 'in' / 'recipe_ingredient.csv').dropna()
     recipe_df = pd.read_csv(assets_path / 'in' / 'recipe.csv')
     author_df = pd.read_csv(assets_path / 'in' / 'author.csv')

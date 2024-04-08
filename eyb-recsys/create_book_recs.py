@@ -4,7 +4,7 @@ from pathlib import Path
 from book_recommender import BookRecommender
 
 if __name__ == "__main__":
-    assets_path = Path(__file__).parent.parent / 'assets' / '2024-02-01'
+    assets_path = Path(__file__).parent.parent / 'assets' / '2024-04-07'
 
     book_shelf_filepath = assets_path / 'in' / 'shelf_book.at-least-25-in-common.csv'
     similarities_filepath = assets_path / 'out' / 'similarities.npz'

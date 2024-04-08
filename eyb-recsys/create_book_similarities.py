@@ -2,7 +2,7 @@ from pathlib import Path
 from book_similarities import ItemSimilarityConstructor
 
 if __name__ == '__main__':
-    assets_path = Path(__file__).parent.parent / 'assets' / '2024-02-01'
+    assets_path = Path(__file__).parent.parent / 'assets' / '2024-04-07'
     book_shelf_filepath = assets_path / 'in' / 'shelf_book.at-least-25-in-common.csv'
     output_path = str(assets_path / 'out')
     sim_matrix_constructor = ItemSimilarityConstructor(
