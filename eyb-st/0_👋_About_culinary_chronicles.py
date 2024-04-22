@@ -22,6 +22,15 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+st.markdown("""
+    <style>
+    a {
+        color: #32a84a;  
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.markdown("""
     <div style='text-align: center;'>
         <h1>🍋 Culinary Chronicles 🍯</h1>
@@ -35,7 +44,7 @@ st.markdown("## About", unsafe_allow_html=True)
 st.markdown("""
     <div style='text-align: justify;'>
         <p>
-            At the time of this writing, I own more than 90 cookbooks totaling more than 15.5K recipes. For the past few years, I’ve been taking note of each recipe 
+            At the time of this writing, I own more close to 100 cookbooks totaling more than 16K recipes. For the past few years, I’ve been taking note of each recipe 
             I cook from my cookbooks and some online magazines, and I log these assets 
             to <a href="https://www.eatyourbooks.com/">EatYourBooks</a> (EYB).
         </p>

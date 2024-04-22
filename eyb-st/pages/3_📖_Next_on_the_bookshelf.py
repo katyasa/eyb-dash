@@ -1,8 +1,9 @@
-import sys
-from pathlib import Path
 import streamlit as st
 import pandas as pd
 import json
+import random
+
+from pathlib import Path
 
 @st.cache_data
 def load_data(assets_path):
@@ -41,20 +42,18 @@ def filter_recommendations_by_country(recommendations, selected_countries, book_
         [book_id for book_id in recommendations if book_id in filtered_book_country_df['book_id'].values][:18]
     return recommendations
 
-import random
 
-def display_recommendations(recommendations, book_df, book_country_df, top_n=18):
+def display_recommendations(recommendations, book_df, book_country_df, feel_lucky_n=5, top_n=18):
     # Map book IDs to cover image URLs, book URLs, and titles
     book_id_to_cover_image_url = pd.Series(book_df['cover_image_url'].values, index=book_df.id).to_dict()
     book_id_to_url = pd.Series(book_df['url'].values, index=book_df.id).to_dict()
     book_id_to_title = pd.Series(book_df['title'].values, index=book_df.id).to_dict()
-
     feel_lucky = st.sidebar.checkbox('I feel lucky', value=False)
     if feel_lucky:
-        random_books = random.sample(recommendations[:200], 2)
-        recommendations = [ rec for rec in recommendations if rec not in random_books][:top_n-2]
+        random_books = random.sample(recommendations[:200], feel_lucky_n)
+        recommendations = [ rec for rec in recommendations if rec not in random_books][:top_n-feel_lucky_n]
         for random_book in random_books:
-            recommendations.insert(random.randint(0, min(12, len(recommendations))), random_book)
+            recommendations.insert(random.randint(0, min(18, len(recommendations))), random_book)
 
     # add an option to filter the recommended books by country:
     my_countries = book_country_df['country_name'].unique()
@@ -81,12 +80,15 @@ def display_recommendations(recommendations, book_df, book_country_df, top_n=18)
 
             for idx, rec in enumerate(row_recs):
                 try:
-                    book_id = rec
-                    book_url = book_id_to_url[book_id]
-                    cover_image_url = book_id_to_cover_image_url[book_id]
-                    book_title = book_id_to_title[book_id]
+                    book_url = book_id_to_url[rec]
+                    cover_image_url = book_id_to_cover_image_url[rec]
+                    book_title = book_id_to_title[rec]
                     columns[idx].image(cover_image_url, width=image_size[0])  # Display book cover image
-                    columns[idx].write(f"[{book_title}]({book_url})")
+                    #columns[idx].write(f"[{book_title}]({book_url})")
+                    columns[idx].markdown(
+                        f"<a style='color: #ADD8E6;' href='{book_url}' target='_blank'>{book_title}</a>",
+                        unsafe_allow_html=True)
+
 
                 except Exception as e:
                     print(e)
@@ -103,19 +105,17 @@ def main():
 
     st.title("What's next on the Book Shelf?")
 
-    assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-02-01'
+    assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-04-07'
 
     book_shelf_df, authorship_df, author_df, book_df, book_country_df, recommendations = \
         load_data(assets_path)
     # skip recommendations not contained in book.csv as those have no extra information
-    recommendations = [rec for rec in recommendations if rec in book_df['id'].values]
+    recommendations = [rec for rec in recommendations ] #if rec in book_df['id'].values]
+    # if st.session_state.get('prev_recommendations') != recommendations:
+    #     st.session_state['prev_recommendations'] = recommendations
+    #     st.rerun()
 
-    if st.session_state.get('prev_recommendations') != recommendations:
-        st.session_state['prev_recommendations'] = recommendations
-        st.rerun()
-
-    display_recommendations(recommendations, book_df, book_country_df, top_n=18)
-
+    display_recommendations(recommendations, book_df, book_country_df, feel_lucky_n=5,top_n=18)
 
 if __name__ == "__main__":
     main()

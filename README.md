@@ -14,8 +14,12 @@ To get all running, there are several steps:
 
 
 ## Recipes for the demo: 
-* pea & ham pasta
-* lasagne of love
+* pea & ham pasta 
+  * Only from this Author (Yotam Ottolenghi)
+* ricotta and oregano meatballs 
+  * In the mood for (Vegetarian)
+* celebration cake
+  * In the mood for (Cakes, large)
+  
 * ultimate traybake ragu
 * walnut and halva cake
-* celebration cake

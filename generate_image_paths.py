@@ -9,17 +9,19 @@ import pandas as pd
 
 def create_csv_with_image_paths(recipe_file, images_file, outfile):
     recipe_df = pd.read_csv(recipe_file)
-    print(recipe_df.columns)
+    recipe_df.set_index('id', inplace=True)
+
     recipe_image_manual_df = pd.read_csv(images_file).drop_duplicates(subset=['recipe_id'])
-    print(recipe_image_manual_df.columns)
+    recipe_image_manual_df.set_index('recipe_id', inplace=True)
 
-    # Create a mapping series
-    map_series = recipe_image_manual_df.set_index('recipe_id')['image_url']
-    recipe_df['image_url'] = recipe_df['image_url'].fillna(recipe_df['id'].map(map_series))
+    # Update the column values
+    recipe_df['image_url'].update(recipe_image_manual_df['image_url'])
 
-
+    recipe_df.reset_index(inplace=True)
     merged_df = recipe_df[['id', 'image_url']].rename(columns={'id': 'recipe_id'})
+
     merged_df.to_csv(outfile, index=False)
+    print('Updated file with image urls written to file.')
 
 
 if __name__ == '__main__':

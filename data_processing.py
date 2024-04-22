@@ -188,6 +188,8 @@ print(recipe_dates_cooked_author_name_book.head(), recipe_dates_cooked_author_na
 print(">>> Validate >>>", recipe_dates_cooked_author_name_book
       .loc[recipe_dates_cooked_author_name_book['date']=='2023-12']['recipe_id'].nunique())
 recipe_dates_cooked_author_name_book = recipe_dates_cooked_author_name_book.reset_index(drop=True)
+recipe_dates_cooked_author_name_book = \
+    recipe_dates_cooked_author_name_book.dropna(subset=['author_id', 'author_name', 'book_id', 'recipe_name', 'title'])
 recipe_dates_cooked_author_name_book.to_csv(data_folder_path_out + '/recipe_data.csv', index=False)
 
 # #recipe_location.to_csv(data_folder_path_out + '/recipe_data_location.csv', index=False)

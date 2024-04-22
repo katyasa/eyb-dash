@@ -3,7 +3,8 @@ import numpy as np
 from scipy.sparse import load_npz, csr_matrix
 
 class BookRecommender:
-    def __init__(self, user_history,
+    def __init__(self,
+                 user_history,
                  similarity_matrix_filepath='similarities.npz',
                  item_mapping_filepath='item_mapping.json'):
         self.similarities = load_npz(similarity_matrix_filepath)

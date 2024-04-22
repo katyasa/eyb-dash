@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 import streamlit as st
 
-assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-02-01'
+assets_path = Path(__file__).parent.parent.parent / 'assets' / '2024-04-07'
 images_path = assets_path / 'images' / 'recipes'
 recs_filepath = assets_path / 'out' / 'recipe_recs.json'
 recipe_categories_filepath = assets_path / 'in' / 'recipe_category.csv'
@@ -22,6 +22,7 @@ def load_data(recs_filepath, recipe_categories_filepath, recipe_data_filepath, r
 recipe_recs_data, recipe_categories, recipe_data_df, recipe_authorship_df = \
     load_data(recs_filepath, recipe_categories_filepath, recipe_data_filepath, recipe_authorship_filepath)
 
+
 # Get the seeds - all items from the recipe recommendations data.
 SEEDS = [item['recipe_name'] for item in recipe_recs_data]
 
@@ -37,7 +38,9 @@ def display_seed_recipe_details(selected_recipe):
         st.image(filtered_recipe['image_url'], use_column_width=True)
     recipe_url = filtered_recipe['url']
     recipe_name = filtered_recipe['recipe_name'].split('<>')[0]
-    st.markdown(f"[{recipe_name}]({recipe_url})")
+    st.markdown(
+        f"<a style='color: #ADD8E6;' href='{recipe_url}' target='_blank'>{recipe_name}</a>",
+        unsafe_allow_html=True)
     st.write(f"**Author:**  \n{filtered_recipe['author_name']}")
     st.write(f"**Book:**  \n {filtered_recipe['book_title']}")
     if filtered_recipe['bookmark_name']:
@@ -66,7 +69,11 @@ def display_filtered_recipes(filtered_recipes, num_items):
                 columns[idx].image(rec['image_url'], width=image_size[0],use_column_width=True)
             except Exception as e:
                 pass
-            columns[idx].write(f"[{rec['recipe_rec']}]({rec['url']})")
+#            columns[idx].write(f"[{rec['recipe_rec']}]({rec['url']})")
+            columns[idx].markdown(
+                f"<a style='color: #ADD8E6;' href='{rec['url']}' target='_blank'>{rec['recipe_rec']}</a>",
+                unsafe_allow_html=True)
+
 
 def recipe_search(recipe_name):
     filtered_recipes = filter_recipes(recipe_name)

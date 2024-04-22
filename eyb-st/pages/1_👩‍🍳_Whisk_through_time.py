@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import plotly.express as px
-START_DATE = '2018-01-01'
+START_DATE = '2017-12-31'
 END_DATE = '2024-03-31'
 from pathlib import Path
 
@@ -52,7 +52,7 @@ def groupby_date_and_author(data):
 
 
 DATA_FOLDER = Path(__file__).parent.parent.parent / 'assets'
-MARCH_FILES_PATH = DATA_FOLDER.joinpath('2024-02-01/out')
+MARCH_FILES_PATH = DATA_FOLDER.joinpath('2024-04-07/out')
 
 file_path = MARCH_FILES_PATH / 'recipe_data.csv'
 
